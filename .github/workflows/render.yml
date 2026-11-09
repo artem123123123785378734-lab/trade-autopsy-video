@@ -47,10 +47,12 @@ jobs:
           curl -L --fail --retry 3 -o /tmp/piper.tgz \
             https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
           tar -xzf /tmp/piper.tgz -C piper-runtime
-          curl -L --fail --retry 3 -o piper-runtime/ru_RU-denis-medium.onnx \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx
-          curl -L --fail --retry 3 -o piper-runtime/ru_RU-denis-medium.onnx.json \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx.json
+          for voice in denis irina; do
+            curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx \
+              https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx
+            curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx.json \
+              https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx.json
+          done
           chmod +x piper-runtime/piper/piper
 
       - name: Render video
