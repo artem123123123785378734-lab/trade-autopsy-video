@@ -62,8 +62,10 @@ LEGACY_PIPER_DIR = Path(os.environ.get("PIPER_SOURCE") or (ROOT.parent / "_work"
 PIPER_DIR = Path(os.environ.get("PIPER_DIR") or (
     Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "TradeAutopsy" / "piper"
 ))
-PIPER_EXE = Path(os.environ.get("PIPER_EXE", "")) if os.environ.get("PIPER_EXE") else (
+PIPER_EXE = Path(os.environ.get("PIPER_EXE")) if os.environ.get("PIPER_EXE") else (
     PIPER_DIR / "piper" / "piper.exe"
+    if (PIPER_DIR / "piper" / "piper.exe").exists()
+    else PIPER_DIR / "piper" / "piper"
 )
 
 

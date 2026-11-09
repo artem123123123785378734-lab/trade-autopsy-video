@@ -21,7 +21,10 @@ def main(payload_path: str) -> None:
     title = str(data.get("title") or "Без названия")
     script = str(data.get("script") or "")
     settings = dict(data.get("settings") or {})
-    settings.update(provider="edge", quality="fast", auto_rate=True)
+    # GitHub-hosted runners cannot reliably reach Microsoft's Edge endpoint.
+    # Use the offline Piper voice bundled by the workflow.
+    settings.update(provider="piper", voice="ru_RU-denis-medium", pitch=0,
+                    quality="fast", auto_rate=True)
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
     project_id = f"gh_{job_id}"

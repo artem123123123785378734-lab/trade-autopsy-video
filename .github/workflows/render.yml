@@ -41,8 +41,22 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Install offline Piper voice
+        run: |
+          mkdir -p piper-runtime
+          curl -L --fail --retry 3 -o /tmp/piper.tgz \
+            https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
+          tar -xzf /tmp/piper.tgz -C piper-runtime
+          curl -L --fail --retry 3 -o piper-runtime/ru_RU-denis-medium.onnx \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx
+          curl -L --fail --retry 3 -o piper-runtime/ru_RU-denis-medium.onnx.json \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx.json
+          chmod +x piper-runtime/piper/piper
+
       - name: Render video
         env:
+          PIPER_DIR: ${{ github.workspace }}/piper-runtime
+          PIPER_EXE: ${{ github.workspace }}/piper-runtime/piper/piper
           PAYLOAD_B64: ${{ inputs.payload }}
         run: |
           echo "$PAYLOAD_B64" | base64 -d > payload.json
