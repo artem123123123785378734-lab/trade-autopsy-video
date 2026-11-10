@@ -279,6 +279,33 @@ def highpass_fft(x: np.ndarray, cutoff: float = 78.0) -> np.ndarray:
     return np.fft.irfft(spec * ramp, n=len(x)).astype(np.float32)
 
 
+def presence_eq(x: np.ndarray) -> np.ndarray:
+    """Small broadcast-style EQ: less mud, more clarity and air."""
+    if len(x) < 32:
+        return x
+    spec = np.fft.rfft(x)
+    freqs = np.fft.rfftfreq(len(x), 1.0 / config.SR)
+    gain = np.ones_like(freqs, dtype=np.float32)
+    gain += 0.20 * np.exp(-0.5 * ((freqs - 2800.0) / 1250.0) ** 2)
+    gain += 0.09 * np.exp(-0.5 * ((freqs - 7200.0) / 2200.0) ** 2)
+    gain -= 0.11 * np.exp(-0.5 * ((freqs - 380.0) / 280.0) ** 2)
+    return np.fft.irfft(spec * gain, n=len(x)).astype(np.float32)
+
+
+def gentle_compress(x: np.ndarray) -> np.ndarray:
+    """Transparent level control so quiet words do not disappear under music."""
+    if len(x) < 64:
+        return x
+    env = np.abs(x)
+    win = max(1, int(0.018 * config.SR))
+    env = np.convolve(env, np.ones(win) / win, mode="same")
+    target = 0.17
+    gain = np.clip((target / (env + 1e-4)) ** 0.22, 0.72, 1.55)
+    smooth = max(1, int(0.06 * config.SR))
+    gain = np.convolve(gain, np.ones(smooth) / smooth, mode="same")
+    return (x * gain).astype(np.float32)
+
+
 def mix_project(plan: dict, settings: dict, out_path: Path, music_path: Path | None = None) -> dict:
     duration = float(plan["duration"])
     n = int((duration + 0.35) * config.SR)
@@ -295,6 +322,8 @@ def mix_project(plan: dict, settings: dict, out_path: Path, music_path: Path | N
         if ln > 0:
             voice[i:i + ln] += x[:ln]
     voice = highpass_fft(voice, 82)
+    voice = presence_eq(voice)
+    voice = gentle_compress(voice)
     peak = float(np.max(np.abs(voice))) or 1.0
     voice = np.tanh(voice / peak * 2.1) / np.tanh(2.1)
     voice *= 0.92

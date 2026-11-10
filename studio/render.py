@@ -52,16 +52,25 @@ class Renderer:
     def __init__(self, plan: dict, settings: dict, fast: bool = False):
         self.plan = plan
         self.settings = settings
-        self.fast = fast
-        self.scale = 0.6667 if fast else 1.0
-        self.out_w = 720 if fast else config.W
-        self.out_h = 1280 if fast else config.H
+        self.quality = str(settings.get("quality") or ("fast" if fast else "quality"))
+        if self.quality not in ("fast", "quality", "ultra"):
+            self.quality = "quality"
+        self.fast = self.quality == "fast"
+        if self.quality == "fast":
+            self.scale = 0.6667
+            self.out_w, self.out_h = 720, 1280
+        elif self.quality == "ultra":
+            self.scale = 4 / 3
+            self.out_w, self.out_h = 1440, 2560
+        else:
+            self.scale = 1.0
+            self.out_w, self.out_h = config.W, config.H
         gfx.set_theme(settings.get("style", "tech_blue"))
         self.theme = gfx.THEME
         self.bg = gfx.make_background()
         self.vignette = gfx.make_vignette()
         # Full-size grain avoids a per-frame 2x scale in Skia software mode.
-        self.grain = gfx.make_grain(4, (config.W, config.H)) if not fast else []
+        self.grain = gfx.make_grain(4, (config.W, config.H)) if not self.fast else []
         self._surface = None
         self.segments = plan.get("scenes", [])
         self.phrases = plan.get("phrases", [])
@@ -319,8 +328,10 @@ def _worker(args: dict):
             "-profile:v", "high", "-level", "4.2",
             "-pix_fmt", "yuv420p", "-movflags", "+faststart",
         ]
-        if args["fast"]:
-            cmd += ["-vf", "scale=1080:1920:flags=lanczos"]
+        if args.get("x264_params"):
+            cmd += ["-x264-params", args["x264_params"]]
+        if rw != config.W or rh != config.H:
+            cmd += ["-vf", f"scale={config.W}:{config.H}:flags=lanczos"]
         cmd.append(str(out))
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         try:
@@ -347,7 +358,7 @@ def _worker(args: dict):
 
 
 # ---------------------------------------------------------------- helpers
-def _visual_key(plan: dict, settings: dict, fast: bool) -> str:
+def _visual_key(plan: dict, settings: dict, quality: str) -> str:
     payload = {
         "title": plan.get("title"),
         "duration": plan.get("duration"),
@@ -364,7 +375,7 @@ def _visual_key(plan: dict, settings: dict, fast: bool) -> str:
         "cta_url": settings.get("cta_url"),
         "cta_label": settings.get("cta_label"),
         "disclaimer": settings.get("disclaimer"),
-        "fast": fast,
+        "quality": quality,
     }
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
@@ -381,8 +392,8 @@ def _concat_and_mux(parts: list[Path], audio: Path, out_path: Path, workdir: Pat
         "-f", "concat", "-safe", "0", "-i", str(list_path),
         "-i", str(audio),
         "-map", "0:v:0", "-map", "1:a:0",
-        "-c:v", "copy", "-af", "loudnorm=I=-14:TP=-1.5:LRA=9",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+        "-c:v", "copy", "-af", "loudnorm=I=-14:TP=-1.2:LRA=9",
+        "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
         "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
@@ -396,7 +407,11 @@ def render_video(plan: dict, settings: dict, out_path: Path, audio_path: Path,
     if total_frames <= 0:
         raise RuntimeError("Пустая длительность видео")
 
-    key = _visual_key(plan, settings, fast)
+    quality = str(settings.get("quality") or ("fast" if fast else "quality"))
+    if quality not in ("fast", "quality", "ultra"):
+        quality = "quality"
+    fast = quality == "fast"
+    key = _visual_key(plan, settings, quality)
     cache_dir = config.CACHE / "renders"
     cache_dir.mkdir(parents=True, exist_ok=True)
     silent = cache_dir / f"visual_{key}.mp4"
@@ -424,10 +439,17 @@ def render_video(plan: dict, settings: dict, out_path: Path, audio_path: Path,
     chunk = math.ceil(total_frames / workers)
     procs = []
     parts = []
-    preset = "ultrafast" if fast else "fast"
-    crf = 24 if fast else 18
+    if quality == "fast":
+        preset, crf = "ultrafast", 24
+        x264_params = ""
+    elif quality == "ultra":
+        preset, crf = "slow", 15
+        x264_params = "aq-mode=3:aq-strength=1.15:deblock=-1,-1"
+    else:
+        preset, crf = "medium", 16
+        x264_params = "aq-mode=3:aq-strength=1.05:deblock=-1,-1"
     if progress:
-        progress(44, f"Рендер: {workers} потоков, {total_frames} кадров")
+        progress(44, f"Рендер {quality}: {workers} потоков, {total_frames} кадров")
 
     for wi in range(workers):
         start = wi * chunk
@@ -446,6 +468,7 @@ def render_video(plan: dict, settings: dict, out_path: Path, audio_path: Path,
             "ffmpeg": config.FFMPEG,
             "preset": preset,
             "crf": crf,
+            "x264_params": x264_params,
             "counter": counter,
             "cancel": cancel_event,
             "errors": errors,

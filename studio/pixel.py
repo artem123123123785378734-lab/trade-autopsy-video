@@ -398,8 +398,14 @@ class PixelRenderer:
         else:
             self.sheet_path = build_sprite_sheet(self.character, workdir / "character.png")
             self.sheet = skia.Image.open(str(self.sheet_path))
+        self.quality = str(settings.get("quality") or "quality")
+        if self.quality not in ("fast", "quality", "ultra"):
+            self.quality = "quality"
+        self.text_scale = 4 / 3 if self.quality == "ultra" else 1.0
+        self.out_w = int(round(config.W * self.text_scale))
+        self.out_h = int(round(config.H * self.text_scale))
         self.low = skia.Surface(SW, SH)
-        self.full = skia.Surface(config.W, config.H)
+        self.full = skia.Surface(self.out_w, self.out_h)
         self.nearest = skia.SamplingOptions(skia.FilterMode.kNearest)
         self.starts = [float(s.get("start", 0)) for s in plan.get("scenes", [])]
         self.duration = float(plan.get("duration", 0) or 0)
@@ -446,6 +452,11 @@ class PixelRenderer:
             x = (i * 37 + 11) % SW
             y = 348 + (i * 29) % 126
             _pixel(c, x, y, accent2 if i % 3 else highlight, 70)
+        # slow floating pixels make the dark background feel alive
+        for i in range(12):
+            x = (i * 41 + int(t * 6)) % SW
+            y = (i * 53 + int(t * 2)) % 190
+            _pixel(c, x, y, highlight if i % 3 else accent2, 55)
 
         if visual == "room":
             # window
@@ -454,7 +465,8 @@ class PixelRenderer:
             _rect(c, 192, 74, 2, 84, gfx.blend(bg, accent, 0.4))
             _rect(c, 154, 112, 78, 2, gfx.blend(bg, accent, 0.4))
             for i in range(6):
-                _pixel(c, 162 + (i * 17) % 62, 82 + (i * 13) % 54, highlight, 170)
+                twinkle = 115 + int(90 * (0.5 + 0.5 * math.sin(t * 2.2 + i * 0.9)))
+                _pixel(c, 162 + (i * 17) % 62, 82 + (i * 13) % 54, highlight, twinkle)
             # poster
             if scene.get("kind") not in ("hook", "cta"):
                 _rect(c, 36, 62, 62, 44, gfx.blend(card, accent, 0.16))
@@ -482,7 +494,8 @@ class PixelRenderer:
                 _rect(c, 60, 86 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
             for i in range(14):
                 x = 66 + i * 10
-                h = 12 + (i * 13) % 48
+                pulse = 0.5 + 0.5 * math.sin(t * 1.8 + i * 0.55)
+                h = 12 + int(((i * 13) % 48) * (0.94 + 0.06 * pulse))
                 _rect(c, x, 220 - h, 6, h, accent if i % 3 else accent2)
                 _rect(c, x, 220 - h, 6, 2, highlight)
             _rect(c, 200, 80, 12, 12, good, 180)
@@ -506,7 +519,7 @@ class PixelRenderer:
             _rect(c, 202, 128, 30, 3, text, 190)
             _rect(c, 160, 148, 46, 18, gfx.blend(card, accent, 0.2))
             _rect(c, 166, 154, 32, 3, muted)
-            _rect(c, 204, 174, 32, 16, accent)
+            _rect(c, 204, 174, 32, 16, accent, 190 + int(65 * (0.5 + 0.5 * math.sin(t * 3))))
             _rect(c, 210, 180, 20, 3, (10, 12, 10))
         elif visual == "terminal":
             _rect(c, 48, 66, 174, 168, gfx.blend(card, (0, 0, 0), 0.18))
@@ -519,6 +532,8 @@ class PixelRenderer:
                 _rect(c, 60, 92 + i * 16, 54 + (i * 17) % 70, 3, good if i % 3 else accent)
                 _rect(c, 60, 97 + i * 16, 26 + (i * 11) % 40, 2, muted, 150)
             _rect(c, 60, 220, 74, 3, highlight)
+            if int(t * 2) % 2 == 0:
+                _rect(c, 60, 226, 10, 2, highlight)
         else:
             _rect(c, 0, 340, SW, 140, gfx.blend(bg, accent, 0.08))
 
@@ -649,10 +664,13 @@ class PixelRenderer:
         full.drawImageRect(
             self.low.makeImageSnapshot(),
             skia.Rect.MakeWH(SW, SH),
-            skia.Rect.MakeWH(config.W, config.H),
+            skia.Rect.MakeWH(self.out_w, self.out_h),
             self.nearest,
             None,
         )
+        if self.text_scale != 1.0:
+            full.save()
+            full.scale(self.text_scale, self.text_scale)
         try:
             self._draw_title(full, scene)
         except Exception:
@@ -662,6 +680,8 @@ class PixelRenderer:
         except Exception:
             pass
         self._draw_hud(full, scene_index, t)
+        if self.text_scale != 1.0:
+            full.restore()
         return self.full
 
     def _draw_captions(self, c, scene, local_t):
@@ -737,14 +757,28 @@ def _wrap_text(text: str, style: str, size: int, max_w: float) -> list[str]:
 def _encode_scene(renderer: PixelRenderer, scene_index: int, duration: float,
                   path: Path, fast: bool, progress=None, cancel=None) -> Path:
     total = max(1, int(round(duration * config.FPS)))
+    if renderer.quality == "fast":
+        preset, crf = "ultrafast", 23
+        x264_params = ""
+    elif renderer.quality == "ultra":
+        preset, crf = "slow", 15
+        x264_params = "aq-mode=3:aq-strength=1.15:deblock=-1,-1"
+    else:
+        preset, crf = "medium", 16
+        x264_params = "aq-mode=3:aq-strength=1.05:deblock=-1,-1"
     cmd = [
         config.FFMPEG, "-y", "-hide_banner", "-loglevel", "error",
-        "-f", "rawvideo", "-pix_fmt", "bgra", "-s", f"{config.W}x{config.H}",
+        "-f", "rawvideo", "-pix_fmt", "bgra", "-s", f"{renderer.out_w}x{renderer.out_h}",
         "-r", str(config.FPS), "-i", "-",
-        "-an", "-c:v", "libx264", "-preset", "ultrafast" if fast else "fast",
-        "-crf", "23" if fast else "18", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", str(path),
+        "-an", "-c:v", "libx264", "-preset", preset,
+        "-crf", str(crf), "-profile:v", "high", "-level", "4.2",
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart",
     ]
+    if x264_params:
+        cmd += ["-x264-params", x264_params]
+    if renderer.out_w != config.W or renderer.out_h != config.H:
+        cmd += ["-vf", f"scale={config.W}:{config.H}:flags=lanczos"]
+    cmd.append(str(path))
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     try:
         for frame in range(total):

@@ -114,12 +114,8 @@ def sanitize_settings(raw: dict | None) -> dict:
         s["duration"] = "60"
     if s.get("style") not in config.STYLES:
         s["style"] = "tech_blue"
-    if s.get("quality") not in ("fast", "quality"):
+    if s.get("quality") not in ("fast", "quality", "ultra"):
         s["quality"] = "quality"
-    if PUBLIC_MODE:
-        # Free CPU Space: 1080p full-quality render would take too long.
-        # Fast still writes a 1080x1920 H.264 file at the end.
-        s["quality"] = "fast"
     s["brand"] = str(s.get("brand") or "TRADE AUTOPSY")[:40]
     s["cta_url"] = str(s.get("cta_url") or "")[:120]
     s["cta_label"] = str(s.get("cta_label") or "Открыть журнал")[:40]
@@ -345,8 +341,8 @@ def create_app() -> Flask:
                          p["id"] == "elevenlabs" or (p["id"] == "piper" and not piper_ok)
                      ))]
         defaults = {**config.DEFAULT_SETTINGS, "eleven_key": ""}
-        if PUBLIC_MODE:
-            defaults["quality"] = "fast"
+        if PUBLIC_MODE and defaults.get("quality") == "fast":
+            defaults["quality"] = "quality"
         if PUBLIC_MODE and owner is not None and not storage.list_projects(owner):
             storage.create_project(config.DEFAULT_TITLE, config.DEFAULT_SCRIPT, defaults, owner)
         projects = storage.list_projects(owner)

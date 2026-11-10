@@ -61,8 +61,11 @@ def main(payload_path: str) -> None:
     # commercial studio; Irina/Ruslan are intentionally not exposed online.
     allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
     voice = str(settings.get("voice") or "")
+    quality = str(settings.get("quality") or "quality")
+    if quality not in ("fast", "quality", "ultra"):
+        quality = "quality"
     settings.update(provider="piper", voice=voice if voice in allowed else "ru_RU-dmitri-medium",
-                    pitch=0, quality="fast", auto_rate=True)
+                    pitch=0, quality=quality, auto_rate=True)
     settings["voice_used"] = settings["voice"]
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
@@ -102,6 +105,7 @@ def main(payload_path: str) -> None:
         "format": info.get("format"),
         "voice": settings.get("voice"),
         "provider": settings.get("provider"),
+        "quality": settings.get("quality"),
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
