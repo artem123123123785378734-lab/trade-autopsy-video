@@ -582,38 +582,48 @@ class PixelRenderer:
             anim = auto_animation(scene.get("text", ""), scene.get("kind", ""))
         if anim not in ANIMATIONS:
             anim = "talk" if scene.get("text") else "idle"
+        scene_start = float(scene.get("start", 0) or 0)
+        scene_end = float(scene.get("end", scene_start + 1) or scene_start + 1)
+        speech_start = max(0.0, float(scene.get("place", scene_start) or scene_start) - scene_start)
+        speech_dur = float(scene.get("dur", 0) or 0)
+        speech_end = speech_start + speech_dur if speech_dur > 0 else scene_end - scene_start
+        talking = bool(scene.get("text")) and speech_start - 0.06 <= t <= speech_end + 0.12
         intensity = str(self.settings.get("pixel_animation_intensity") or "medium")
         speed = {"low": 4.0, "medium": 7.0, "high": 11.0}.get(intensity, 7.0)
         frame = self._frame(anim, t * (speed / 7.0))
         position = scene.get("character_position") or self.settings.get("pixel_position") or "auto"
         if position == "auto":
-            position = "left" if visual in ("chart", "terminal", "phone", "board") else "center"
-            if scene.get("kind") == "cta":
-                position = "right"
+            position = "center"
         size = scene.get("character_size") or self.settings.get("pixel_size") or "medium"
-        size_scale = {"small": 1.05, "medium": 1.35, "large": 1.7}.get(size, 1.35)
+        size_scale = {"small": 1.8, "medium": 2.4, "large": 2.9}.get(size, 2.4)
         height_scale = {"short": 0.90, "normal": 1.0, "tall": 1.12}.get(
             self.character.get("height", "normal"), 1.0)
         scale = size_scale * height_scale
         char_w = FRAME_W * scale
         if position == "left":
-            x = 14
+            x = 12
         elif position == "right":
-            x = SW - char_w - 14
+            x = SW - char_w - 12
         else:
             x = (SW - char_w) / 2
         if anim == "walk":
             x += math.sin(t * speed * 0.3) * 8
-        elif anim in ("talk", "idle", "explain", "think"):
-            x += math.sin(t * speed * 0.32) * 1.2
-        bob = math.sin(t * speed * 0.55) * (2.6 if intensity == "high" else 1.4)
+        elif anim in ("talk", "idle", "explain", "think") or talking:
+            x += math.sin(t * speed * 0.34) * (2.0 if talking else 1.2)
+        bob_speed = 0.82 if talking else 0.55
+        bob = math.sin(t * speed * bob_speed) * (3.2 if talking else (2.6 if intensity == "high" else 1.4))
         # Keep the feet on the same baseline regardless of height/size.
         y = 328 - FRAME_H * scale + bob
-        _rect(c, x + 4, y + FRAME_H * scale - 2, max(6.0, char_w - 8), 3, (0, 0, 0), 95)
+        # floor highlight makes the character read as the main subject
+        _rect(c, x - 5, y + FRAME_H * scale - 2, char_w + 10, 3,
+              gfx.blend(bg, accent, 0.45), 150)
+        _rect(c, x + 4, y + FRAME_H * scale - 2, max(6.0, char_w - 8), 3, (0, 0, 0), 110)
         if self.custom_image is not None:
             _draw_image_sprite(c, self.custom_image, x, y, char_w, FRAME_H * scale, self.nearest)
         else:
             _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale)
+        if talking and self.custom_image is None:
+            _draw_talk_overlay(c, x, y, scale, self.character, t)
 
     def _frame(self, anim: str, t: float) -> int:
         frames = {
@@ -767,6 +777,28 @@ class PixelRenderer:
     def preview_scene(self, scene_index: int, t: float, path: Path):
         self.render_scene(scene_index, t).makeImageSnapshot().save(str(path), skia.kPNG)
         return path
+
+
+def _draw_talk_overlay(c, x, y, scale: float, ch: dict, t: float):
+    """Mouth open/close + tiny voice bars layered over any gesture pose."""
+    ctype = ch.get("type", "human")
+    mouth_x = 18.0
+    mouth_y = 19.0 if ctype == "animal" else 17.0 if ctype == "robot" else 16.0
+    open_mouth = int(t * 10) % 2 == 0
+    mw = max(2, int(4 * scale))
+    mh = max(1, int((2 if open_mouth else 1) * scale))
+    _rect(c, x + mouth_x * scale, y + mouth_y * scale, mw, mh, (18, 22, 28), 240)
+    if open_mouth:
+        _rect(c, x + (mouth_x + 1) * scale, y + (mouth_y + 1) * scale,
+              max(1, int(2 * scale)), max(1, int(scale)), (112, 38, 46), 220)
+    accent = tuple(gfx.ACCENT)
+    ex = x + (31.0 if ctype == "animal" else 30.0) * scale
+    ey = y + (16.0 if ctype == "animal" else 13.0) * scale
+    step = max(2, int(2.2 * scale))
+    w = max(2, int(1.2 * scale))
+    for i in range(3):
+        h = max(2, int(scale * (1 + (int(t * 13) + i) % 4)))
+        _rect(c, ex + i * step, ey - h, w, h, accent, 205)
 
 
 def _draw_sprite(c, sheet, x, y, frame: int, sampling, scale: float = 1.0):
