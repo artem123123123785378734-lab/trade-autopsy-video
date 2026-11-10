@@ -56,14 +56,14 @@ def main(payload_path: str) -> None:
     scene_index = data.get("scene_index")
     base_job_id = data.get("base_job_id")
     base_scene_count = data.get("base_scene_count")
-    # GitHub-hosted runners cannot reliably reach Microsoft's Edge endpoint.
-    # Use the offline Piper voice bundled by the workflow.
-    # The Denis model was retrained on 2026-11-09 and crashes the bundled
-    # Piper 2023 runtime, so online renders use Irina for now.
-    allowed = {"ru_RU-irina-medium"}
+    # GitHub-hosted runners use the offline Piper runtime bundled by the
+    # workflow. Dmitri and Denis are CC0 voices, so they are safe for the
+    # commercial studio; Irina/Ruslan are intentionally not exposed online.
+    allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
     voice = str(settings.get("voice") or "")
-    settings.update(provider="piper", voice=voice if voice in allowed else "ru_RU-irina-medium",
+    settings.update(provider="piper", voice=voice if voice in allowed else "ru_RU-dmitri-medium",
                     pitch=0, quality="fast", auto_rate=True)
+    settings["voice_used"] = settings["voice"]
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
     project_id = f"gh_{job_id}"
@@ -100,6 +100,8 @@ def main(payload_path: str) -> None:
         "scenes": info.get("scenes"),
         "size": info.get("size"),
         "format": info.get("format"),
+        "voice": settings.get("voice"),
+        "provider": settings.get("provider"),
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")

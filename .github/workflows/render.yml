@@ -47,11 +47,19 @@ jobs:
           curl -L --fail --retry 3 -o /tmp/piper.tgz \
             https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
           tar -xzf /tmp/piper.tgz -C piper-runtime
-          for voice in irina; do
+          # Dmitri is a current CC0 voice. Denis is pinned to the last model
+          # revision compatible with the bundled Piper 2023 runtime; the
+          # retrained 2026-11-09 model crashes this binary.
+          for voice in dmitri denis; do
+            if [ "$voice" = "denis" ]; then
+              rev="e7229f7d33a10e145e109b886d661984201ac3c4"
+            else
+              rev="main"
+            fi
             curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx \
-              https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx
+              https://huggingface.co/rhasspy/piper-voices/resolve/${rev}/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx
             curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx.json \
-              https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx.json
+              https://huggingface.co/rhasspy/piper-voices/resolve/${rev}/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx.json
           done
           chmod +x piper-runtime/piper/piper
 

@@ -146,6 +146,14 @@ def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
         )
     model = _piper_model(voice)
     if not model:
+        # Old projects may still point at Irina/Ruslan. Those datasets are not
+        # cleared for the commercial studio, so fall back to a CC0 voice.
+        for fallback in ("ru_RU-dmitri-medium", "ru_RU-denis-medium"):
+            model = _piper_model(fallback)
+            if model:
+                voice = fallback
+                break
+    if not model:
         raise RuntimeError(f"Модель Piper для голоса {voice} не найдена.")
     wav = TTS_CACHE / f"{key}.wav"
     raw = TTS_CACHE / f"{key}_raw.wav"

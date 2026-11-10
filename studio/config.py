@@ -71,7 +71,7 @@ PIPER_EXE = Path(os.environ.get("PIPER_EXE")) if os.environ.get("PIPER_EXE") els
 
 def ensure_piper() -> bool:
     """Copy the optional Piper runtime/models to an ASCII path on first use."""
-    models = ["ru_RU-denis-medium.onnx", "ru_RU-ruslan-medium.onnx", "ru_RU-irina-medium.onnx"]
+    models = ["ru_RU-dmitri-medium.onnx", "ru_RU-denis-medium.onnx"]
     if PIPER_EXE.exists() and any((PIPER_DIR / m).exists() for m in models):
         return True
     src = LEGACY_PIPER_DIR
@@ -177,28 +177,20 @@ EDGE_VOICES = [
 
 PIPER_VOICES = [
     {
+        "id": "ru_RU-dmitri-medium",
+        "name": "Дмитрий (офлайн)",
+        "desc": "Мужской · естественный · CC0",
+        "provider": "piper",
+        "gender": "male",
+        "model": "ru_RU-dmitri-medium.onnx",
+    },
+    {
         "id": "ru_RU-denis-medium",
         "name": "Денис (офлайн)",
-        "desc": "Мужской · локальный Piper",
+        "desc": "Мужской · спокойный · CC0",
         "provider": "piper",
         "gender": "male",
         "model": "ru_RU-denis-medium.onnx",
-    },
-    {
-        "id": "ru_RU-ruslan-medium",
-        "name": "Руслан (офлайн)",
-        "desc": "Мужской · локальный Piper",
-        "provider": "piper",
-        "gender": "male",
-        "model": "ru_RU-ruslan-medium.onnx",
-    },
-    {
-        "id": "ru_RU-irina-medium",
-        "name": "Ирина (офлайн)",
-        "desc": "Женский · локальный Piper",
-        "provider": "piper",
-        "gender": "female",
-        "model": "ru_RU-irina-medium.onnx",
     },
 ]
 
@@ -241,8 +233,8 @@ DURATIONS = [
 ]
 
 DEFAULT_SETTINGS: dict = {
-    "provider": "edge",
-    "voice": "ru-RU-DmitryNeural",
+    "provider": "piper",
+    "voice": "ru_RU-dmitri-medium",
     "rate": 0,
     "auto_rate": True,
     "pitch": -1,
