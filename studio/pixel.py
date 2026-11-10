@@ -639,27 +639,37 @@ class PixelRenderer:
         a_kick = min(1.0, max(0.0, t / 0.28))
         a_title = min(1.0, max(0.0, (t - 0.06) / 0.42))
         a_accent = min(1.0, max(0.0, (t - 0.24) / 0.42))
+        a_plate = min(1.0, max(0.0, (t - 0.02) / 0.30))
         rise_title = int((1 - a_title) * 34)
         rise_accent = int((1 - a_accent) * 22)
+        size = 56 if kind != "hook" else 64
+        title_font = "monobold" if self.settings.get("pixel_font") == "mono" else "black"
+        title_lines = _wrap_text(title.upper(), title_font, size, 900)[:3] if title else []
+        accent_lines = _wrap_text(accent.upper(), "bold", 27, 880)[:2] if accent else []
+        widths = [gfx.text_w(line, title_font, size, -1.0) for line in title_lines]
+        widths += [gfx.text_w(line, "bold", 27, 0.4) for line in accent_lines]
+        if kicker:
+            widths.append(gfx.text_w(kicker.upper(), "mono", 15, 2.0))
+        plate_w = min(config.W - 72, int(max(widths or [320]) + 46))
+        plate_h = 248 + len(title_lines) * int(size * 1.06) + (8 + len(accent_lines) * 34 if accent_lines else 0) - 178
+        _rect(c, 36, 180, plate_w, plate_h, (4, 6, 8), int(192 * a_plate))
+        _rect(c, 36, 180, 4, plate_h, accent_rgb, int(210 * a_plate))
+        _rect(c, 36, 180 + plate_h - 2, plate_w, 2, gfx.blend(accent_rgb, (0, 0, 0), 0.35),
+              int(120 * a_plate))
         if kicker:
             gfx.draw_text(c, kicker.upper(), 52, 196, "mono", 15, accent_rgb,
                           int(230 * a_kick), tracking=2.0)
-        if title:
-            size = 56 if kind != "hook" else 64
-            title_font = "monobold" if self.settings.get("pixel_font") == "mono" else "black"
-            lines = _wrap_text(title.upper(), title_font, size, 900)
-            y = 248
-            for line in lines[:3]:
-                yy = y + rise_title
-                gfx.draw_text(c, line, 52, yy, title_font, size, (0, 0, 0),
-                              int(150 * a_title), tracking=-1.0)
-                gfx.draw_text(c, line, 49, yy - 3, title_font, size, text_rgb,
-                              int(255 * a_title), tracking=-1.0)
-                y += int(size * 1.06)
-        if accent:
-            lines = _wrap_text(accent.upper(), "bold", 27, 880)
+        y = 248
+        for line in title_lines:
+            yy = y + rise_title
+            gfx.draw_text(c, line, 52, yy, title_font, size, (0, 0, 0),
+                          int(150 * a_title), tracking=-1.0)
+            gfx.draw_text(c, line, 49, yy - 3, title_font, size, text_rgb,
+                          int(255 * a_title), tracking=-1.0)
+            y += int(size * 1.06)
+        if accent_lines:
             y += 8
-            for line in lines[:2]:
+            for line in accent_lines:
                 gfx.draw_text(c, line, 52, y + rise_accent, "bold", 27, accent_rgb,
                               int(235 * a_accent), tracking=0.4)
                 y += 34
