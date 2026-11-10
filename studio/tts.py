@@ -417,6 +417,12 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
         lead = LEAD_PAD
         dur = info["dur"]
         scene_dur = max(3.1, lead + dur + TAIL_PAD)
+        try:
+            override = float(scene.get("duration_override") or 0)
+        except (TypeError, ValueError):
+            override = 0
+        if override > scene_dur:
+            scene_dur = override
         scene["start"] = round(cursor, 3)
         scene["end"] = round(cursor + scene_dur, 3)
         scene["place"] = round(cursor + lead, 3)

@@ -6,7 +6,26 @@ import shutil
 import time
 from pathlib import Path
 
-from . import analyzer, audio, config, render, tts
+from . import analyzer, audio, config, pixel, render, tts
+
+
+def _normalize_scenes(scenes: list) -> list[dict]:
+    out: list[dict] = []
+    for i, raw in enumerate(scenes or []):
+        if not isinstance(raw, dict):
+            continue
+        s = dict(raw)
+        s["index"] = i
+        s["id"] = str(s.get("id") or f"s{i + 1:02d}")
+        s["text"] = str(s.get("text") or "")
+        s["kind"] = str(s.get("kind") or "statement")
+        s["title"] = str(s.get("title") or "")
+        s["accent"] = str(s.get("accent") or "")
+        s["kicker"] = str(s.get("kicker") or s.get("label") or "")
+        s["label"] = str(s.get("label") or s["kicker"])
+        s["bullets"] = list(s.get("bullets") or [])
+        out.append(s)
+    return out
 
 
 def _poster(plan: dict, settings: dict, path: Path) -> None:
@@ -21,7 +40,9 @@ def _poster(plan: dict, settings: dict, path: Path) -> None:
 
 
 def generate(project_id: str, title: str, script: str, settings: dict,
-             render_id: str, progress=None, cancel=None, force_tts: bool = False) -> dict:
+             render_id: str, progress=None, cancel=None, force_tts: bool = False,
+             scenes_override: list | None = None, scene_index: int | None = None,
+             reuse_clips: dict[int, Path] | None = None) -> dict:
     t_start = time.time()
     workdir = config.PROJECTS / project_id / "renders" / render_id
     workdir.mkdir(parents=True, exist_ok=True)
@@ -31,12 +52,16 @@ def generate(project_id: str, title: str, script: str, settings: dict,
             progress(max(0, min(100, int(pct))), message)
 
     report(2, "Разбираю сценарий на сцены")
-    plan = analyzer.make_plan(title, script, settings)
+    if scenes_override:
+        plan = {"title": title, "scenes": _normalize_scenes(scenes_override), "rate": 0}
+    else:
+        plan = analyzer.make_plan(title, script, settings)
     if not plan["scenes"]:
         raise RuntimeError("Не удалось разбить сценарий на сцены")
 
     effective = dict(config.DEFAULT_SETTINGS)
     effective.update(settings or {})
+    effective["format"] = str(effective.get("format") or "graphics")
     effective["rate"] = int(plan["rate"])
     # A safe URL for the CTA card.
     effective["cta_url"] = str(effective.get("cta_url") or "").replace("https://", "").replace("http://", "").strip().rstrip("/")
@@ -64,12 +89,24 @@ def generate(project_id: str, title: str, script: str, settings: dict,
     (workdir / "voiceover.txt").write_text(
         "\n\n".join(s.get("text", "") for s in plan.get("scenes", []) if s.get("text")),
         encoding="utf-8")
-    _poster(plan, effective, workdir / "poster.png")
+    if effective["format"] == "pixel":
+        pixel.render_pixel_poster(plan, effective, workdir, workdir / "poster.png")
+    else:
+        _poster(plan, effective, workdir / "poster.png")
 
     video = workdir / "video.mp4"
+    scene_clips: list[str] = []
     report(45, "Рендерю видео")
-    render.render_video(plan, effective, video, master, progress=report, cancel=cancel,
-                        fast=effective.get("quality") == "fast")
+    if effective["format"] == "pixel":
+        pixel_info = pixel.render_pixel_video(
+            plan, effective, video, master, workdir,
+            progress=report, cancel=cancel,
+            scene_index=scene_index, reuse_clips=reuse_clips,
+        )
+        scene_clips = [str(p) for p in pixel_info.get("scene_clips", [])]
+    else:
+        render.render_video(plan, effective, video, master, progress=report, cancel=cancel,
+                            fast=effective.get("quality") == "fast")
 
     if not video.exists() or video.stat().st_size < 100_000:
         raise RuntimeError("Видео не создано или получилось пустым")
@@ -89,6 +126,8 @@ def generate(project_id: str, title: str, script: str, settings: dict,
         "elapsed": round(time.time() - t_start, 1),
         "plan": plan,
         "audio": str(master),
+        "format": effective["format"],
+        "scene_clips": scene_clips,
     }
     return info
 

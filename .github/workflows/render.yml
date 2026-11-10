@@ -47,7 +47,7 @@ jobs:
           curl -L --fail --retry 3 -o /tmp/piper.tgz \
             https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
           tar -xzf /tmp/piper.tgz -C piper-runtime
-          for voice in denis irina; do
+          for voice in irina; do
             curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx \
               https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/${voice}/medium/ru_RU-${voice}-medium.onnx
             curl -L --fail --retry 3 -o piper-runtime/ru_RU-${voice}-medium.onnx.json \
@@ -74,4 +74,5 @@ jobs:
             out/video.mp4
             out/subtitles.srt
             out/poster.png
-          fail_on_unmatched_files: true
+            out/scene-*.mp4
+          fail_on_unmatched_files: false
