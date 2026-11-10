@@ -1,10 +1,11 @@
 """Pixel-art renderer for the second Video Studio format.
 
 The visuals are drawn on a small 270x480 canvas (pixel units) and upscaled
-with nearest-neighbour sampling. The character is a reusable sprite sheet:
-one image with idle / talk / walk / point / wave frames, generated from the
-project's character settings. Scene clips are silent; the existing audio
-mixer provides the voice + music track.
+with nearest-neighbour sampling. The character is a reusable 26-frame sprite
+sheet generated once from the project's character settings: idle, blink,
+talk, walk, point, wave, happy, sad, think, scared, show, victory and error
+poses with alternating gesture frames. Scene clips are silent; the existing
+audio mixer provides the voice + music track.
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ from . import config, gfx, render
 
 FRAME_W = 40
 FRAME_H = 60
-SHEET_FRAMES = 17
+SHEET_FRAMES = 26
 SW, SH = 270, 480
 SCALE = 4
 
@@ -124,15 +125,24 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
 
     walk = frame in (4, 5, 6, 7)
     talk = frame in (2, 3)
-    point = frame == 8
-    wave = frame == 9
-    sad = frame == 10
-    happy = frame == 11
-    think = frame == 12
-    scared = frame == 13
-    show = frame == 14
-    victory = frame == 15
-    error = frame == 16
+    point = frame in (8, 17)
+    point_alt = frame == 17
+    wave = frame in (9, 18)
+    wave_alt = frame == 18
+    sad = frame in (10, 24)
+    sad_alt = frame == 24
+    happy = frame in (11, 19)
+    happy_alt = frame == 19
+    think = frame in (12, 20)
+    think_alt = frame == 20
+    scared = frame in (13, 25)
+    scared_alt = frame == 25
+    show = frame in (14, 22)
+    show_alt = frame == 22
+    victory = frame in (15, 21)
+    victory_alt = frame == 21
+    error = frame in (16, 23)
+    error_alt = frame == 23
     blink = frame == 1
 
     slim = ch.get("proportions") == "slim"
@@ -167,31 +177,40 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
 
     # arms
     if point or show:
-        _rect(c, ox + body_x + body_w - 2, oy + 21, 12, 4, shirt)
-        _rect(c, ox + body_x + body_w + 8, oy + 20, 4, 4, skin)
+        dy = 3 if point_alt else 0
+        _rect(c, ox + body_x + body_w - 2, oy + 21 + dy, 12, 4, shirt)
+        _rect(c, ox + body_x + body_w + 8, oy + 20 + dy, 4, 4, skin)
         if show:
-            _rect(c, ox + body_x + body_w + 10, oy + 18, 5, 5, (255, 198, 86))
-            _rect(c, ox + body_x + body_w + 11, oy + 19, 3, 3, (255, 255, 220))
+            lift = -3 if show_alt else 0
+            _rect(c, ox + body_x + body_w + 10, oy + 18 + lift, 5, 5, (255, 198, 86))
+            _rect(c, ox + body_x + body_w + 11, oy + 19 + lift, 3, 3, (255, 255, 220))
         _rect(c, ox + body_x - 6, oy + 26, 5, 11, shirt)
         _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
     elif wave or happy or victory or scared:
-        _rect(c, ox + body_x + body_w - 2, oy + 12, 4, 13, shirt)
-        _rect(c, ox + body_x + body_w - 1, oy + 6, 5, 7, skin)
+        lift = 4 if wave_alt else 0
+        _rect(c, ox + body_x + body_w - 2, oy + 12 + lift, 4, 13, shirt)
+        _rect(c, ox + body_x + body_w - 1, oy + 6 + lift, 5, 7, skin)
         _rect(c, ox + body_x - 6, oy + 25, 5, 12, shirt)
         _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
-        if victory:
+        left_up = (victory and not victory_alt) or happy_alt or scared_alt
+        if left_up:
             _rect(c, ox + body_x - 6, oy + 12, 4, 13, shirt)
             _rect(c, ox + body_x - 7, oy + 6, 5, 7, skin)
+        elif victory_alt:
+            _rect(c, ox + body_x - 6, oy + 19, 4, 13, shirt)
+            _rect(c, ox + body_x - 7, oy + 14, 5, 7, skin)
     elif think:
+        hand_y = 6 if think_alt else 10
         _rect(c, ox + body_x + body_w - 2, oy + 16, 7, 4, shirt)
-        _rect(c, ox + body_x + body_w + 3, oy + 10, 4, 8, skin)
+        _rect(c, ox + body_x + body_w + 3, oy + hand_y, 4, 8, skin)
         _rect(c, ox + body_x - 6, oy + 26, 5, 11, shirt)
         _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
     elif sad:
-        _rect(c, ox + body_x - 6, oy + 28, 5, 12, shirt)
-        _rect(c, ox + body_x - 6, oy + 38, 5, 4, skin)
-        _rect(c, ox + body_x + body_w + 1, oy + 28, 5, 12, shirt)
-        _rect(c, ox + body_x + body_w + 1, oy + 38, 5, 4, skin)
+        drop = 2 if sad_alt else 0
+        _rect(c, ox + body_x - 6, oy + 28 + drop, 5, 12, shirt)
+        _rect(c, ox + body_x - 6, oy + 38 + drop, 5, 4, skin)
+        _rect(c, ox + body_x + body_w + 1, oy + 28 + drop, 5, 12, shirt)
+        _rect(c, ox + body_x + body_w + 1, oy + 38 + drop, 5, 4, skin)
     elif walk:
         swing = 2 if (frame - 4) in (0, 1) else -2
         _rect(c, ox + body_x - 6, oy + 24 + swing, 5, 12, shirt)
@@ -320,11 +339,16 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
             _rect(c, ox + 30, oy + 11, 2, 4, accent)
 
     if error:
-        _rect(c, ox + 18, oy - 4, 2, 7, (255, 92, 92))
-        _rect(c, ox + 15, oy - 1, 8, 2, (255, 92, 92))
+        dy = -2 if error_alt else 0
+        _rect(c, ox + 18, oy - 4 + dy, 2, 7, (255, 92, 92))
+        _rect(c, ox + 15, oy - 1 + dy, 8, 2, (255, 92, 92))
+        if error_alt:
+            _rect(c, ox + 24, oy - 3, 2, 2, (255, 198, 86))
     if victory:
         _rect(c, ox + 18, oy - 3, 2, 2, (255, 198, 86))
         _rect(c, ox + 15, oy - 5, 3, 3, (255, 198, 86))
+        if victory_alt:
+            _rect(c, ox + 22, oy - 5, 2, 2, (255, 198, 86))
 
 
 def build_sprite_sheet(character: dict, path: Path) -> Path:
@@ -580,7 +604,9 @@ class PixelRenderer:
             x = (SW - char_w) / 2
         if anim == "walk":
             x += math.sin(t * speed * 0.3) * 8
-        bob = math.sin(t * speed * 0.55) * (1.6 if intensity == "high" else 1.0)
+        elif anim in ("talk", "idle", "explain", "think"):
+            x += math.sin(t * speed * 0.32) * 1.2
+        bob = math.sin(t * speed * 0.55) * (2.6 if intensity == "high" else 1.4)
         # Keep the feet on the same baseline regardless of height/size.
         y = 328 - FRAME_H * scale + bob
         _rect(c, x + 4, y + FRAME_H * scale - 2, max(6.0, char_w - 8), 3, (0, 0, 0), 95)
@@ -591,15 +617,16 @@ class PixelRenderer:
 
     def _frame(self, anim: str, t: float) -> int:
         frames = {
-            "idle": (0, 1), "talk": (2, 3), "explain": (2, 8), "point": (8,),
-            "wave": (9,), "surprise": (13, 11), "happy": (11,), "sad": (10,),
-            "think": (12,), "scared": (13,), "show": (14,), "victory": (15,),
-            "error": (16,), "walk": (4, 5, 6, 7),
+            "idle": (0, 1), "talk": (2, 3), "explain": (2, 8, 17, 3),
+            "point": (8, 17), "wave": (9, 18), "surprise": (13, 25, 11, 19),
+            "happy": (11, 19), "sad": (10, 24), "think": (12, 20),
+            "scared": (13, 25), "show": (14, 22), "victory": (15, 21),
+            "error": (16, 23), "walk": (4, 5, 6, 7),
         }.get(anim, (0, 1))
         return frames[int(t * 3) % len(frames)]
 
     # ---------------------------------------------------------------- text
-    def _draw_title(self, c, scene):
+    def _draw_title(self, c, scene, t):
         kind = scene.get("kind", "statement")
         title = str(scene.get("title") or "").strip()
         accent = str(scene.get("accent") or "").strip()
@@ -609,26 +636,38 @@ class PixelRenderer:
         accent_rgb = tuple(gfx.ACCENT)
         text_rgb = tuple(gfx.TEXT)
         muted = tuple(gfx.MUTED)
+        a_kick = min(1.0, max(0.0, t / 0.28))
+        a_title = min(1.0, max(0.0, (t - 0.06) / 0.42))
+        a_accent = min(1.0, max(0.0, (t - 0.24) / 0.42))
+        rise_title = int((1 - a_title) * 34)
+        rise_accent = int((1 - a_accent) * 22)
         if kicker:
-            gfx.draw_text(c, kicker.upper(), 52, 196, "mono", 15, accent_rgb, 230, tracking=2.0)
+            gfx.draw_text(c, kicker.upper(), 52, 196, "mono", 15, accent_rgb,
+                          int(230 * a_kick), tracking=2.0)
         if title:
             size = 56 if kind != "hook" else 64
             title_font = "monobold" if self.settings.get("pixel_font") == "mono" else "black"
             lines = _wrap_text(title.upper(), title_font, size, 900)
             y = 248
             for line in lines[:3]:
-                gfx.draw_text(c, line, 52, y, title_font, size, (0, 0, 0), 150, tracking=-1.0)
-                gfx.draw_text(c, line, 49, y - 3, title_font, size, text_rgb, 255, tracking=-1.0)
+                yy = y + rise_title
+                gfx.draw_text(c, line, 52, yy, title_font, size, (0, 0, 0),
+                              int(150 * a_title), tracking=-1.0)
+                gfx.draw_text(c, line, 49, yy - 3, title_font, size, text_rgb,
+                              int(255 * a_title), tracking=-1.0)
                 y += int(size * 1.06)
         if accent:
             lines = _wrap_text(accent.upper(), "bold", 27, 880)
             y += 8
             for line in lines[:2]:
-                gfx.draw_text(c, line, 52, y, "bold", 27, accent_rgb, 235, tracking=0.4)
+                gfx.draw_text(c, line, 52, y + rise_accent, "bold", 27, accent_rgb,
+                              int(235 * a_accent), tracking=0.4)
                 y += 34
-        # pixel underline
-        _rect(c, 52, y + 2, 90, 4, accent_rgb)
-        _rect(c, 146, y + 2, 22, 4, tuple(gfx.ACCENT2))
+        # pixel underline grows in
+        k = min(1.0, max(0.0, (t - 0.34) / 0.42))
+        if k > 0:
+            _rect(c, 52, y + 2, int(90 * k), 4, accent_rgb)
+            _rect(c, 52 + int(96 * k), y + 2, int(22 * k), 4, tuple(gfx.ACCENT2))
 
     def _draw_hud(self, c, scene_index, t):
         # top bar
@@ -672,7 +711,7 @@ class PixelRenderer:
             full.save()
             full.scale(self.text_scale, self.text_scale)
         try:
-            self._draw_title(full, scene)
+            self._draw_title(full, scene, t)
         except Exception:
             pass
         try:
@@ -682,6 +721,10 @@ class PixelRenderer:
         self._draw_hud(full, scene_index, t)
         if self.text_scale != 1.0:
             full.restore()
+        # short fade avoids a hard black cut between pixel scenes
+        if t < 0.20:
+            _rect(full, 0, 0, self.out_w, self.out_h, (0, 0, 0),
+                  int(210 * (1 - t / 0.20)))
         return self.full
 
     def _draw_captions(self, c, scene, local_t):

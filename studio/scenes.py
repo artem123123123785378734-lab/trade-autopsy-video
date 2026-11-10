@@ -50,25 +50,36 @@ def draw_title_block(c, seg, y=360, size=88, max_lines=2, center=False,
     step = fsize * 1.04
     for i, ln in enumerate(lines):
         aa = appear(u, 0.06 + i * 0.08, 0.42)
+        rise = int((1 - aa) * 24)
         tw = text_w(ln, style, fsize, -1.6)
         x = (CX - tw / 2) if center else M
         sh = _title_shader(x, y + i * step, tw)
-        gfx.draw_text(c, ln, x, y + i * step, style, fsize, TEXT, int(255 * aa),
-                      tracking=-1.6, shader=sh, glow=gfx.ACCENT, glow_a=38, glow_w=12)
+        gfx.draw_text(c, ln, x, y + i * step + rise, style, fsize, TEXT, int(255 * aa),
+                      tracking=-1.6, shader=sh, glow=gfx.ACCENT, glow_a=38, glow_w=12,
+                      scale=1.0 + 0.012 * (1 - aa))
     bottom = y + (len(lines) - 1) * step
     accent = seg.get("accent", "")
     if accent:
         a2 = appear(u, 0.34, 0.45)
+        rise2 = int((1 - a2) * 18)
         asize = gfx.fit_size(accent, "extrabold", max_w, accent_size, 28, 0.4)
         ay = bottom + asize * 1.28
         if center:
-            gfx.draw_text(c, accent, CX, ay, "extrabold", asize, TEXT, int(238 * a2),
+            gfx.draw_text(c, accent, CX, ay + rise2, "extrabold", asize, TEXT, int(238 * a2),
                           "center", tracking=0.5)
         else:
-            line(c, M, ay - asize * 0.72, M + 5, ay + 6, gfx.ACCENT2, 5, int(210 * a2))
-            gfx.draw_text(c, accent, M + 24, ay, "extrabold", asize, TEXT, int(238 * a2),
-                          tracking=0.4)
+            line(c, M, ay - asize * 0.72 + rise2, M + 5, ay + 6 + rise2,
+                 gfx.ACCENT2, 5, int(210 * a2))
+            gfx.draw_text(c, accent, M + 24, ay + rise2, "extrabold", asize, TEXT,
+                          int(238 * a2), tracking=0.4)
         bottom = ay
+    # animated underline under the whole block
+    bar = ease_out(clamp((u - 0.30) / 0.55))
+    if bar > 0:
+        bx = (CX - 120) if center else M
+        by = bottom + 34
+        line(c, bx, by, bx + 240 * bar, by, gfx.ACCENT, 4, 170, cap=False)
+        line(c, bx + 252 * bar, by, bx + 300 * bar, by, gfx.ACCENT2, 4, 150, cap=False)
     return bottom
 
 

@@ -145,10 +145,23 @@ class Renderer:
     def draw_cut_fx(self, c, t):
         for s in self.scene_starts:
             lt = t - s
-            if 0 <= lt < 0.22:
-                a = int(44 * (1 - lt / 0.22) ** 2)
-                c.drawRect(skia.Rect.MakeWH(config.W, config.H),
-                           fill_paint(gfx.ACCENT, a))
+            if 0 <= lt < 0.32:
+                k = clamp(lt / 0.32)
+                fade = (1 - k) ** 2
+                # quick diagonal light wipe instead of a plain full-screen flash
+                x = -config.W * 0.55 + k * config.W * 1.55
+                path = skia.Path()
+                path.moveTo(x, 0)
+                path.lineTo(x + 250, 0)
+                path.lineTo(x - 170, config.H)
+                path.lineTo(x - 420, config.H)
+                path.close()
+                c.drawPath(path, fill_paint(gfx.ACCENT, int(58 * fade)))
+                line(c, x + 250, 0, x - 170, config.H, gfx.HIGHLIGHT, 3,
+                     int(165 * fade), cap=False)
+                if lt < 0.12:
+                    c.drawRect(skia.Rect.MakeWH(config.W, config.H),
+                               fill_paint(gfx.TEXT, int(16 * (1 - lt / 0.12))))
                 break
 
     def draw_grain(self, c, t):
@@ -203,9 +216,10 @@ class Renderer:
     def _caption_layout(self, phrase):
         words = phrase.get("words") or []
         if not words:
-            return 54, []
-        max_w = 920
-        for size in range(62, 39, -2):
+            return 58, []
+        max_w = 936
+        fallback = (48, [])
+        for size in range(72, 47, -2):
             lines: list[list[dict]] = []
             cur: list[dict] = []
             for w in words:
@@ -217,15 +231,15 @@ class Renderer:
                 cur.append(w)
             if cur:
                 lines.append(cur)
-            if len(lines) <= 3 and all(
-                text_w(" ".join((x.get("display") or x.get("w", "")) for x in ln),
-                       "bold", size, -0.8) <= max_w for ln in lines
-            ):
-                # Avoid a single orphan word on the last line.
-                if len(lines) >= 2 and len(lines[-1]) == 1 and len(lines[-2]) > 1 and size > 46:
-                    continue
+            fallback = (size, lines)
+            if len(lines) > 2:
+                continue
+            if lines and len(lines[-1]) == 1 and len(lines[-2]) > 1 and size > 54:
+                continue
+            if all(text_w(" ".join((x.get("display") or x.get("w", "")) for x in ln),
+                        "bold", size, -0.8) <= max_w for ln in lines):
                 return size, lines
-        return 40, lines
+        return fallback
 
     def draw_subs(self, c, t):
         i = bisect_right(self.p_starts, t + 0.001) - 1
@@ -253,9 +267,9 @@ class Renderer:
                 active = k
                 break
 
-        line_h = size * 1.22
-        base = 1510 - (len(lines) - 1) * line_h / 2
-        rise = int((1 - ease_out(clamp((t - t0) / 0.14))) * 14)
+        line_h = size * 1.18
+        base = 1508 - (len(lines) - 1) * line_h / 2
+        rise = int((1 - ease_out(clamp((t - t0) / 0.16))) * 24)
         for li, line_words in enumerate(lines):
             texts = [w.get("display") or w.get("w", "") for w in line_words]
             total = text_w(" ".join(texts), "bold", size, -0.8)
@@ -265,13 +279,24 @@ class Renderer:
                 gi = word_index.get(id(w), 0)
                 is_active = gi == active
                 key = is_keyword(txt)
+                reveal = clamp((t - t0 - gi * 0.018) / 0.11)
                 color = gfx.HIGHLIGHT if is_active else (gfx.ACCENT if key else TEXT)
-                a = alpha if (active < 0 or is_active or gi < active) else int(alpha * 0.82)
-                gfx.draw_text(c, txt, x, y + 3, "bold", size, (0, 0, 0), int(a * 0.65),
+                a = alpha * reveal
+                if active >= 0 and gi > active:
+                    a *= 0.76
+                a = int(a)
+                ww = text_w(txt, "bold", size, -0.8)
+                if is_active:
+                    a = min(255, int(a * 1.08))
+                gfx.draw_text(c, txt, x, y + 4, "bold", size, (0, 0, 0), int(a * 0.62),
                               tracking=-0.8)
                 gfx.draw_text(c, txt, x, y, "bold", size, color, a, tracking=-0.8,
-                              glow=(gfx.HIGHLIGHT if is_active else None), glow_a=60, glow_w=9)
-                x += text_w(txt, "bold", size, -0.8) + text_w(" ", "bold", size, -0.8)
+                              glow=(gfx.HIGHLIGHT if is_active else None), glow_a=72, glow_w=11,
+                              scale=(1.055 if is_active else 1.0))
+                if is_active:
+                    line(c, x + 2, y + 11, x + ww - 2, y + 11, gfx.HIGHLIGHT, 3,
+                         int(alpha * 0.85), cap=False)
+                x += ww + text_w(" ", "bold", size, -0.8)
 
     # ------------------------------------------------------------------ frame
     def render(self, t):
@@ -291,12 +316,24 @@ class Renderer:
                 idx = i
         seg = self.segments[idx] if self.segments else {}
         fn = scenes.SCENES.get(seg.get("kind", "statement"), scenes.scene_statement)
+        lt = t - float(seg.get("start", 0) or 0)
+        c.save()
+        if seg.get("kind") != "hook" and lt < 0.34:
+            k = ease_out(clamp(lt / 0.34))
+            sc = 1.028 - 0.028 * k
+            c.translate(config.W / 2, 760)
+            c.scale(sc, sc)
+            c.translate(-config.W / 2, -760)
+            c.translate(math.sin(lt * 96) * 3.5 * (1 - k),
+                        math.cos(lt * 74) * 2.5 * (1 - k))
         try:
             fn(c, t, seg, self.ctx)
         except Exception:
             # A broken visual must never produce a black frame.
             gfx.draw_text(c, "SCENE ERROR", config.W / 2, 800, "bold", 42, BAD, 200,
                           "center")
+        finally:
+            c.restore()
         self.draw_cut_fx(c, t)
         c.drawImage(self.vignette, 0, 0)
         self.draw_subs(c, t)
