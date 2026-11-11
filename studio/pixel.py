@@ -46,6 +46,18 @@ DEFAULT_CHARACTER = {
     "custom_image": "",
 }
 
+ICONS = {
+    "coin": ("0011100", "0111110", "1110111", "1101011", "1110111", "0111110", "0011100"),
+    "arrow_up": ("0001000", "0011100", "0111110", "1111111", "0001000", "0001000", "0001000"),
+    "arrow_down": ("0001000", "0001000", "0001000", "1111111", "0111110", "0011100", "0001000"),
+    "check": ("0000001", "0000011", "0000110", "1001100", "1111000", "0110000", "0000000"),
+    "cross": ("1000001", "1100011", "0110110", "0011100", "0110110", "1100011", "1000001"),
+    "star": ("0001000", "0011100", "1111111", "0111110", "0011100", "0110110", "0100010"),
+    "heart": ("0110110", "1111111", "1111111", "1111111", "0111110", "0011100", "0001000"),
+    "question": ("0011100", "0110110", "0000110", "0001100", "0011000", "0000000", "0011000"),
+    "wave": ("0010000", "0111000", "0010100", "0010100", "0011000", "0110000", "0000000"),
+}
+
 VISUALS = ("room", "chart", "phone", "board", "terminal", "none")
 ANIMATIONS = (
     "auto", "idle", "talk", "explain", "point", "surprise", "happy", "sad",
@@ -103,6 +115,16 @@ def _pixel(c, x, y, rgb, a=255):
     _rect(c, x, y, 1, 1, rgb, a)
 
 
+def _draw_icon(c, name, x, y, color, scale=1, alpha=210):
+    pattern = ICONS.get(name)
+    if not pattern:
+        return
+    for row, line in enumerate(pattern):
+        for col, ch in enumerate(line):
+            if ch == "1":
+                _rect(c, x + col * scale, y + row * scale, scale, scale, color, alpha)
+
+
 def _draw_character(c, ox, oy, frame: int, ch: dict):
     skin = ch["skin"]
     hair = ch["hair"]
@@ -111,6 +133,11 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
     shoes = ch["shoes"]
     accent = tuple(gfx.ACCENT)
     dark = (18, 22, 28)
+    outline = (8, 10, 14)
+    skin_shadow = gfx.blend(skin, (0, 0, 0), 0.16)
+    shirt_shadow = gfx.blend(shirt, (0, 0, 0), 0.20)
+    shirt_light = gfx.blend(shirt, (255, 255, 255), 0.18)
+    pants_light = gfx.blend(pants, (255, 255, 255), 0.12)
     ctype = ch.get("type", "human")
     style = ch.get("pixel_style", "16bit")
     gender = ch.get("gender", "male")
@@ -157,23 +184,46 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
 
     if ctype == "animal":
         # tail
+        _rect(c, ox + 27, oy + 35, 11, 5, outline)
+        _rect(c, ox + 34, oy + 31, 5, 8, outline)
         _rect(c, ox + 28, oy + 36, 9, 3, skin)
         _rect(c, ox + 35, oy + 32, 3, 6, skin)
+        _rect(c, ox + 36, oy + 33, 1, 3, gfx.blend(skin, (255, 255, 255), 0.22))
 
     if walk:
         left = (frame - 4) in (0, 1)
         leg_l += 2 if left else 0
         leg_r -= 2 if left else 0
-    _rect(c, ox + leg_l, oy + 42, 5 if slim else 6, 12, pants)
-    _rect(c, ox + leg_r, oy + 42, 5 if slim else 6, 12, pants)
+    leg_w = 5 if slim else 6
+    _rect(c, ox + leg_l - 1, oy + 41, leg_w + 2, 14, outline)
+    _rect(c, ox + leg_r - 1, oy + 41, leg_w + 2, 14, outline)
+    _rect(c, ox + leg_l - 2, oy + 53, 9, 6, outline)
+    _rect(c, ox + leg_r - 2, oy + 53, 9, 6, outline)
+    _rect(c, ox + leg_l, oy + 42, leg_w, 12, pants)
+    _rect(c, ox + leg_r, oy + 42, leg_w, 12, pants)
+    _rect(c, ox + leg_l, oy + 44, 1, 8, pants_light)
+    _rect(c, ox + leg_r, oy + 44, 1, 8, pants_light)
     _rect(c, ox + leg_l - 1, oy + 54, 7, 4, shoes)
     _rect(c, ox + leg_r - 1, oy + 54, 7, 4, shoes)
+    _rect(c, ox + leg_l, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
+    _rect(c, ox + leg_r, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
 
     # body
+    _rect(c, ox + body_x - 1, oy + 21, body_w + 2, 22, outline)
     _rect(c, ox + body_x, oy + 22, body_w, 20, shirt)
-    _rect(c, ox + body_x, oy + 22, body_w, 3, gfx.blend(shirt, (255, 255, 255), 0.16))
+    _rect(c, ox + body_x, oy + 22, body_w, 3, shirt_light)
+    _rect(c, ox + body_x + body_w - 2, oy + 25, 2, 15, shirt_shadow)
+    # collar, buttons, pockets and belt
+    _rect(c, ox + body_x + 3, oy + 22, max(3, body_w - 6), 1,
+          gfx.blend(shirt, (255, 255, 255), 0.35))
+    _rect(c, ox + body_x + body_w // 2 - 1, oy + 25, 1, 1, shirt_shadow)
+    _rect(c, ox + body_x + body_w // 2 - 1, oy + 30, 1, 1, shirt_shadow)
+    _rect(c, ox + body_x + 2, oy + 33, 3, 1, shirt_shadow)
+    _rect(c, ox + body_x + body_w - 5, oy + 33, 3, 1, shirt_shadow)
+    _rect(c, ox + body_x, oy + 38, body_w, 2, outline)
+    _rect(c, ox + body_x + body_w // 2 - 1, oy + 38, 2, 2, accent)
     if style == "detailed":
-        _rect(c, ox + body_x + 2, oy + 27, 1, 12, gfx.blend(shirt, (0, 0, 0), 0.22))
+        _rect(c, ox + body_x + 2, oy + 27, 1, 9, gfx.blend(shirt, (0, 0, 0), 0.22))
 
     # arms
     if point or show:
@@ -225,8 +275,16 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
     head_x = 12 if not wide else 11
     head_y = 5
     head_w = 16 if not wide else 18
+    _rect(c, ox + head_x - 1, oy + head_y - 1, head_w + 2, 19, outline)
     _rect(c, ox + head_x, oy + head_y, head_w, 16, skin)
     _rect(c, ox + head_x - 1, oy + head_y + 13, head_w + 2, 3, skin)
+    _rect(c, ox + head_x + head_w - 3, oy + head_y + 1, 2, 14, skin_shadow)
+    # ears and nose
+    _rect(c, ox + head_x - 1, oy + head_y + 7, 2, 3, skin_shadow)
+    _rect(c, ox + head_x + head_w - 1, oy + head_y + 7, 2, 3, skin_shadow)
+    if ctype in ("human", "fantasy"):
+        _rect(c, ox + head_x + 7, oy + head_y + 9, 1, 2, skin_shadow)
+        _rect(c, ox + head_x + 5, oy + head_y + 8, 5, 1, gfx.blend(skin, (0, 0, 0), 0.08))
 
     if ctype == "robot":
         _rect(c, ox + 12, oy + 5, 16, 16, skin)
@@ -241,6 +299,9 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         # side panels
         _rect(c, ox + 8, oy + 10, 4, 8, gfx.blend(skin, (0, 0, 0), 0.2))
         _rect(c, ox + 28, oy + 10, 4, 8, gfx.blend(skin, (0, 0, 0), 0.2))
+        _rect(c, ox + 13, oy + 10, 1, 1, (245, 255, 255))
+        _rect(c, ox + 18, oy + 27, 4, 2, accent)
+        _rect(c, ox + 19, oy + 27, 2, 1, (245, 255, 255))
     elif ctype == "animal":
         # ears
         _rect(c, ox + 10, oy + 1, 5, 6, skin)
@@ -254,6 +315,8 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         # fur tuft
         _rect(c, ox + 12, oy + 3, 16, 3, hair)
         _rect(c, ox + 13, oy + 1, 5, 3, hair)
+        _rect(c, ox + 14, oy + 3, 10, 1, gfx.blend(hair, (255, 255, 255), 0.24))
+        _rect(c, ox + 17, oy + 16, 6, 1, gfx.blend(skin, (0, 0, 0), 0.10))
         # eyes
         _rect(c, ox + 14, oy + 11, 3, 3, eye)
         _rect(c, ox + 23, oy + 11, 3, 3, eye)
@@ -267,6 +330,9 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         _rect(c, ox + 19, oy - 4, 2, 3, accent)
         _rect(c, ox + 15, oy + 11, 2, 2, eye)
         _rect(c, ox + 23, oy + 11, 2, 2, eye)
+        _rect(c, ox + 15, oy + 11, 1, 1, (245, 255, 255))
+        _rect(c, ox + 23, oy + 11, 1, 1, (245, 255, 255))
+        _rect(c, ox + 18, oy - 5, 2, 1, tuple(gfx.HIGHLIGHT))
         _rect(c, ox + 18, oy + 16, 4, 1, dark)
     else:
         # human hair
@@ -281,6 +347,7 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
             if hair_style == "long":
                 _rect(c, ox + 10, oy + 12, 3, 10, hair)
                 _rect(c, ox + 27, oy + 12, 3, 10, hair)
+            _rect(c, ox + 12, oy + 4, 7, 1, gfx.blend(hair, (255, 255, 255), 0.24))
         # eyes / mouth
         if blink:
             _rect(c, ox + 15, oy + 12, 2, 1, eye)
@@ -299,6 +366,9 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         else:
             _rect(c, ox + 15, oy + 11, 2, 2, eye)
             _rect(c, ox + 23, oy + 11, 2, 2, eye)
+        if not blink and not (scared or expression == "surprised"):
+            _rect(c, ox + 15, oy + 11, 1, 1, (245, 245, 255))
+            _rect(c, ox + 23, oy + 11, 1, 1, (245, 245, 255))
         if gender == "female" and not blink:
             _rect(c, ox + 14, oy + 9, 4, 1, dark)
             _rect(c, ox + 22, oy + 9, 4, 1, dark)
@@ -453,7 +523,110 @@ class PixelRenderer:
         muted = tuple(gfx.MUTED)
         return bg, card, accent, accent2, highlight, good, bad, text, muted
 
-    def _draw_world(self, c, scene, t):
+    def _draw_backdrop(self, c, t, scene_index):
+        """Four backdrop variants so consecutive scenes do not look identical."""
+        bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
+        variant = int(scene_index) % 4
+        if variant == 0:
+            # night city behind the scene
+            for i in range(11):
+                x = (i * 37 + 13) % SW
+                y = 36 + (i * 19) % 90
+                a = 80 + int(80 * (0.5 + 0.5 * math.sin(t * 2.0 + i)))
+                _pixel(c, x, y, highlight if i % 3 else text, a)
+            _rect(c, 202, 54, 20, 18, gfx.blend(card, highlight, 0.35), 150)
+            _rect(c, 206, 58, 12, 10, gfx.blend(bg, highlight, 0.55), 120)
+            for b in range(9):
+                bx = b * 31 - 4
+                bh = 20 + (b * 17) % 48
+                by = 192 - bh
+                _rect(c, bx, by, 27, bh, gfx.blend(bg, accent, 0.10), 150)
+                _rect(c, bx, by, 27, 2, gfx.blend(accent, (0, 0, 0), 0.3), 90)
+                for wy in range(by + 7, 188, 12):
+                    for wx in range(bx + 5, bx + 24, 9):
+                        if (wx + wy + int(t * 2)) % 7 < 3:
+                            _rect(c, wx, wy, 2, 3, highlight, 70)
+        elif variant == 1:
+            # neon grid / synthwave wall
+            for y in range(58, 200, 18):
+                _rect(c, 0, y, SW, 1, accent, 22)
+            for x in range(0, SW, 24):
+                _rect(c, x, 44, 1, 168, accent2, 18)
+            for r in range(4):
+                rr = 22 + r * 18
+                _rect(c, SW // 2 - rr, 150 - rr // 3, rr * 2, 2, accent2, 24)
+            for i in range(7):
+                x = (i * 41 + int(t * 4)) % SW
+                y = 55 + (i * 23) % 130
+                _rect(c, x, y, 4, 4, highlight if i % 2 else accent2, 45)
+        elif variant == 2:
+            # editorial poster wall
+            for i, (x, y, w, h) in enumerate(((24, 60, 62, 50), (98, 46, 44, 72), (180, 70, 64, 44))):
+                _rect(c, x, y, w, h, gfx.blend(card, accent if i % 2 == 0 else accent2, 0.14), 130)
+                _rect(c, x + 5, y + 5, w - 10, 4, accent if i % 2 == 0 else accent2, 55)
+                for bar in range(3):
+                    _rect(c, x + 5, y + 16 + bar * 9, max(8, w - 18 - bar * 7), 3, muted, 38)
+            _rect(c, 18, 140, 96, 4, gfx.blend(card, (0, 0, 0), 0.2), 150)
+            _rect(c, 24, 132, 6, 8, good, 80)
+            _rect(c, 36, 130, 5, 10, accent2, 80)
+            _rect(c, 48, 134, 7, 6, highlight, 70)
+        else:
+            # abstract diagonal studio panels
+            for i in range(5):
+                x = -30 + i * 66
+                _rect(c, x, 42, 24, 168, gfx.blend(bg, accent2, 0.06 + i * 0.012), 95)
+                _rect(c, x + 8, 42, 2, 168, accent, 20)
+            for i in range(6):
+                x = (i * 53 + int(t * 7)) % SW
+                y = 52 + (i * 31) % 120
+                _rect(c, x, y, 3, 3, highlight, 55)
+
+    def _draw_character_fx(self, c, scene, t, x, y, char_w, scale, anim):
+        bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
+        kind = scene.get("kind", "statement")
+        fade = min(1.0, max(0.0, t / 0.5))
+        if anim in ("victory", "happy") or kind == "cta":
+            for i in range(18):
+                px = (i * 47 + int(t * 26)) % SW
+                py = (i * 29 + int(t * (18 + i % 5))) % 210
+                color = (good, accent, accent2, highlight)[i % 4]
+                _rect(c, px, py, 2, 2, color, int(150 * fade))
+        if anim == "error":
+            for i in range(4):
+                gy = 30 + (i * 37 + int(t * 13)) % 170
+                _rect(c, (i * 53) % SW, gy, 18 + (i * 7) % 24, 1, bad, 80)
+        left = x - 24
+        right = x + char_w + 6
+        rows = (y + 16, y + 52, y + 86)
+        if kind in ("chart", "stat", "bars", "dashboard", "terminal"):
+            icons = (("arrow_up", good), ("coin", (255, 198, 86)))
+        elif kind in ("checklist", "timeline", "compare"):
+            icons = (("check", good), ("star", highlight))
+        elif kind == "cta":
+            icons = (("heart", accent2), ("star", (255, 198, 86)))
+        elif anim == "error":
+            icons = (("cross", bad), ("question", (255, 198, 86)))
+        elif anim == "think":
+            icons = (("question", highlight), ("coin", (255, 198, 86)))
+        elif anim == "show":
+            icons = (("coin", (255, 198, 86)), ("check", good))
+        else:
+            icons = (("question", accent), ("star", (255, 198, 86)))
+        for i, (name, color) in enumerate(icons):
+            bob = math.sin(t * 2.4 + i * 1.7) * 4
+            ix = left if i % 2 == 0 else right
+            iy = rows[i] + bob
+            _draw_icon(c, name, ix, iy, color, 2, int(190 * fade))
+        if t < 0.55:
+            k = 1.0 - t / 0.55
+            for i in range(14):
+                ang = i * math.pi * 2 / 14
+                r = 14 + 62 * (t / 0.55)
+                px = x + char_w / 2 + math.cos(ang) * r
+                py = y + 58 * scale + math.sin(ang) * r * 0.7
+                _rect(c, px, py, 2, 2, accent if i % 2 else highlight, int(150 * k))
+
+    def _draw_world(self, c, scene, t, scene_index):
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
         visual = scene.get("pixel_visual")
         if not visual or visual == "auto":
@@ -481,6 +654,9 @@ class PixelRenderer:
             x = (i * 41 + int(t * 6)) % SW
             y = (i * 53 + int(t * 2)) % 190
             _pixel(c, x, y, highlight if i % 3 else accent2, 55)
+        self._draw_backdrop(c, t, scene_index)
+        for sy in range(0, SH, 4):
+            _rect(c, 0, sy, SW, 1, (0, 0, 0), 8)
 
         if visual == "room":
             # window
@@ -635,6 +811,7 @@ class PixelRenderer:
             _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale)
         if talking and self.custom_image is None:
             _draw_talk_overlay(c, x, y, scale, self.character, t)
+        self._draw_character_fx(c, scene, t, x, y, char_w, scale, anim)
 
     def _frame(self, anim: str, t: float) -> int:
         frames = {
@@ -724,7 +901,7 @@ class PixelRenderer:
         low = self.low.getCanvas()
         low.resetMatrix()
         try:
-            self._draw_world(low, scene, t)
+            self._draw_world(low, scene, t, scene_index)
         except Exception:
             _rect(low, 0, 0, SW, SH, (8, 8, 11))
             _rect(low, 20, 200, 230, 80, tuple(gfx.ACCENT))
