@@ -46,8 +46,10 @@ jobs:
 
       - name: Install graphics libraries
         run: |
-          # The runner image already points at the Azure mirror. Keep the
-          # timeouts so a temporary network problem cannot stall the render.
+          # The Azure mirror can be unreachable from some runners. Try the
+          # public Ubuntu archive and keep hard timeouts on every step.
+          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+            -print0 | xargs -0 -r sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g'
           timeout 180 sudo apt-get update -o Acquire::Retries=2 \
             -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
           timeout 240 sudo apt-get install -y --no-install-recommends \
