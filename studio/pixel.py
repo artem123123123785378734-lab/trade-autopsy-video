@@ -573,6 +573,10 @@ class PixelRenderer:
                 _rect(c, ox, oy, 3, 3, accent2 if i % 2 else highlight, 150)
                 _rect(c, ox + 1, oy + 1, 1, 1, text, 190)
 
+        # Push the scene graphics behind the character. The character is the
+        # storyteller; charts and windows are supporting context.
+        _rect(c, 0, 44, SW, 196, (0, 0, 0), 26)
+
         # character
         character_on = scene.get("character")
         if character_on is False or self.settings.get("pixel_character") is False:
@@ -588,14 +592,19 @@ class PixelRenderer:
         speech_dur = float(scene.get("dur", 0) or 0)
         speech_end = speech_start + speech_dur if speech_dur > 0 else scene_end - scene_start
         talking = bool(scene.get("text")) and speech_start - 0.06 <= t <= speech_end + 0.12
+        if talking and (scene_end - scene_start) > 4.2 and anim in ("talk", "explain", "idle"):
+            beat = int(max(0.0, t - speech_start) // 2.6)
+            if beat % 2 == 1:
+                anim = "point" if visual in ("chart", "board", "terminal", "phone") else (
+                    "happy" if scene.get("kind") == "cta" else "explain")
         intensity = str(self.settings.get("pixel_animation_intensity") or "medium")
-        speed = {"low": 4.0, "medium": 7.0, "high": 11.0}.get(intensity, 7.0)
+        speed = {"low": 5.0, "medium": 8.5, "high": 12.5}.get(intensity, 8.5)
         frame = self._frame(anim, t * (speed / 7.0))
         position = scene.get("character_position") or self.settings.get("pixel_position") or "auto"
         if position == "auto":
             position = "center"
         size = scene.get("character_size") or self.settings.get("pixel_size") or "medium"
-        size_scale = {"small": 1.8, "medium": 2.4, "large": 2.9}.get(size, 2.4)
+        size_scale = {"small": 2.0, "medium": 2.8, "large": 3.3}.get(size, 2.8)
         height_scale = {"short": 0.90, "normal": 1.0, "tall": 1.12}.get(
             self.character.get("height", "normal"), 1.0)
         scale = size_scale * height_scale
@@ -611,10 +620,12 @@ class PixelRenderer:
         elif anim in ("talk", "idle", "explain", "think") or talking:
             x += math.sin(t * speed * 0.34) * (2.0 if talking else 1.2)
         bob_speed = 0.82 if talking else 0.55
-        bob = math.sin(t * speed * bob_speed) * (3.2 if talking else (2.6 if intensity == "high" else 1.4))
+        bob = math.sin(t * speed * bob_speed) * (3.8 if talking else (3.2 if intensity == "high" else 2.0))
         # Keep the feet on the same baseline regardless of height/size.
         y = 328 - FRAME_H * scale + bob
-        # floor highlight makes the character read as the main subject
+        # soft stage light + floor highlight where the character stands
+        gfx.orb(c, x + char_w / 2, y + FRAME_H * scale * 0.52,
+                max(20, char_w * 0.78), accent, 8, 2)
         _rect(c, x - 5, y + FRAME_H * scale - 2, char_w + 10, 3,
               gfx.blend(bg, accent, 0.45), 150)
         _rect(c, x + 4, y + FRAME_H * scale - 2, max(6.0, char_w - 8), 3, (0, 0, 0), 110)
