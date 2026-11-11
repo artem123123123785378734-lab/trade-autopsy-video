@@ -31,6 +31,9 @@ SR = 48000
 
 # ---------------------------------------------------------------- ffmpeg
 def find_ffmpeg() -> str:
+    env_path = os.environ.get("FFMPEG")
+    if env_path and Path(env_path).exists():
+        return env_path
     candidates = []
     env = os.environ.get("FFMPEG")
     if env:

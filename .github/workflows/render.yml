@@ -33,21 +33,25 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install FFmpeg
-        run: |
-          # ubuntu-latest already ships ffmpeg and most GL libs. Never let a
-          # slow or unreachable apt mirror stall the whole render.
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            timeout 120 sudo apt-get update -o Acquire::Retries=1 || true
-            timeout 180 sudo apt-get install -y --no-install-recommends ffmpeg || true
-          fi
-          for pkg in libgl1 libglib2.0-0 libegl1 libgles2; do
-            dpkg -s "$pkg" >/dev/null 2>&1 || timeout 180 sudo apt-get install -y --no-install-recommends "$pkg" || true
-          done
-          command -v ffmpeg
-
       - name: Install Python dependencies
         run: pip install -r requirements.txt
+
+      - name: Configure FFmpeg
+        run: |
+          # imageio-ffmpeg ships a static binary with libx264. This avoids
+          # apt mirrors that can hang on GitHub-hosted runners.
+          FFMPEG_BIN="$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+          echo "FFMPEG=$FFMPEG_BIN" >> "$GITHUB_ENV"
+          "$FFMPEG_BIN" -hide_banner -version | head -n 1
+
+      - name: Verify Skia graphics libraries
+        run: |
+          python - <<'PY'
+          import skia
+          surface = skia.Surface(64, 64)
+          surface.getCanvas().clear(skia.ColorBLACK)
+          print("skia ok")
+          PY
 
       - name: Install offline Piper voice
         run: |
