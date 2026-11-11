@@ -270,6 +270,19 @@ class Renderer:
         line_h = size * 1.18
         base = 1508 - (len(lines) - 1) * line_h / 2
         rise = int((1 - ease_out(clamp((t - t0) / 0.16))) * 24)
+        # subtle readable plate behind the caption block
+        max_line_w = max(
+            text_w(" ".join(w.get("display") or w.get("w", "") for w in ln),
+                    "bold", size, -0.8)
+            for ln in lines
+        )
+        plate_w = min(config.W - 80, max_line_w + 52)
+        plate_x = config.W / 2 - plate_w / 2
+        plate_y = base - rise - size * 0.92
+        plate_h = (len(lines) - 1) * line_h + size * 1.18
+        gfx.rrect(c, plate_x, plate_y, plate_w, plate_h, 20,
+                  fill=(4, 7, 12), alpha=int(alpha * 0.48),
+                  stroke=gfx.ACCENT, sw=1.0)
         for li, line_words in enumerate(lines):
             texts = [w.get("display") or w.get("w", "") for w in line_words]
             total = text_w(" ".join(texts), "bold", size, -0.8)

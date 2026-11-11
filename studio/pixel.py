@@ -581,6 +581,59 @@ class PixelRenderer:
                 y = 52 + (i * 31) % 120
                 _rect(c, x, y, 3, 3, highlight, 55)
 
+    def _draw_mascot(self, c, t, anim, tint):
+        if self.settings.get("pixel_mascot", True) is False:
+            return
+        jump = 0
+        shake = 0
+        if anim in ("victory", "happy"):
+            jump = int(abs(math.sin(t * 7.0)) * 4)
+        elif anim == "error":
+            shake = int(math.sin(t * 22.0) * 2)
+        bob = int(math.sin(t * 3.1) * 1.2)
+        x = SW - 34 + shake
+        y = 312 - jump + bob
+        body = (228, 78, 60)
+        light = (255, 148, 96)
+        dark = (118, 32, 34)
+        _rect(c, x + 1, y + 15, 14, 3, (0, 0, 0), 90)
+        _rect(c, x + 2, y + 2, 12, 13, body)
+        _rect(c, x + 3, y + 1, 10, 2, body)
+        _rect(c, x + 4, y + 3, 5, 2, light, 220)
+        _rect(c, x + 3, y + 12, 10, 3, dark, 180)
+        # feet
+        _rect(c, x + 4, y + 14, 3, 3, dark)
+        _rect(c, x + 10, y + 14, 3, 3, dark)
+        blink = int(t * 2.2) % 6 == 0
+        if anim == "error":
+            _rect(c, x + 5, y + 6, 1, 1, dark)
+            _rect(c, x + 7, y + 6, 1, 1, dark)
+            _rect(c, x + 5, y + 8, 1, 1, dark)
+            _rect(c, x + 7, y + 8, 1, 1, dark)
+            _rect(c, x + 9, y + 6, 1, 1, dark)
+            _rect(c, x + 11, y + 6, 1, 1, dark)
+            _rect(c, x + 9, y + 8, 1, 1, dark)
+            _rect(c, x + 11, y + 8, 1, 1, dark)
+        elif blink:
+            _rect(c, x + 5, y + 7, 3, 1, dark)
+            _rect(c, x + 9, y + 7, 3, 1, dark)
+        else:
+            _rect(c, x + 5, y + 6, 3, 3, (248, 248, 255))
+            _rect(c, x + 9, y + 6, 3, 3, (248, 248, 255))
+            _rect(c, x + 6, y + 7, 1, 1, dark)
+            _rect(c, x + 10, y + 7, 1, 1, dark)
+        if anim in ("victory", "happy"):
+            _rect(c, x + 6, y + 11, 4, 1, dark)
+            _rect(c, x + 5, y + 10, 1, 1, dark)
+            _rect(c, x + 11, y + 10, 1, 1, dark)
+        elif anim in ("sad", "error"):
+            _rect(c, x + 7, y + 12, 3, 1, dark)
+        elif anim in ("talk", "explain", "point", "show"):
+            _rect(c, x + 7, y + 11, 3, 2, dark)
+        else:
+            _rect(c, x + 7, y + 11, 3, 1, dark)
+        _rect(c, x + 3, y + 5, 1, 2, light, 180)
+
     def _draw_character_fx(self, c, scene, t, x, y, char_w, scale, anim):
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
         kind = scene.get("kind", "statement")
@@ -635,11 +688,17 @@ class PixelRenderer:
             visual = _default_visual(scene.get("kind", "statement"))
 
         _rect(c, 0, 0, SW, SH, bg)
-        # sky / wall bands
+        tint = ((64, 118, 255), (168, 76, 245), (24, 196, 178), (196, 226, 64))[int(scene_index) % 4]
+        # sky / wall bands with a different tint in every scene
         for i in range(6):
-            shade = gfx.blend(bg, accent, 0.06 + i * 0.012)
+            shade = gfx.blend(bg, tint, 0.08 + i * 0.015)
             _rect(c, 0, i * 70, SW, 72, shade)
-        _rect(c, 0, 340, SW, 140, gfx.blend(bg, (0, 0, 0), 0.25))
+        # reference-style dotted tech grid
+        for gx in range(6, SW, 12):
+            for gy in range(64, 252, 12):
+                _pixel(c, gx, gy, tint if (gx + gy) % 3 else highlight, 22)
+        _rect(c, 0, 200, SW, 2, gfx.blend(bg, tint, 0.55), 110)
+        _rect(c, 0, 340, SW, 140, gfx.blend(gfx.blend(bg, tint, 0.08), (0, 0, 0), 0.25))
         _rect(c, 0, 338, SW, 3, accent)
         # textured studio floor: subtle bands + pixel specks instead of a flat void
         for i in range(8):
@@ -752,6 +811,13 @@ class PixelRenderer:
         # Push the scene graphics behind the character. The character is the
         # storyteller; charts and windows are supporting context.
         _rect(c, 0, 44, SW, 196, (0, 0, 0), 26)
+
+        mascot_anim = scene.get("pixel_animation") or "auto"
+        if mascot_anim == "auto":
+            mascot_anim = auto_animation(scene.get("text", ""), scene.get("kind", ""))
+        if mascot_anim not in ANIMATIONS:
+            mascot_anim = "talk" if scene.get("text") else "idle"
+        self._draw_mascot(c, t, mascot_anim, tint)
 
         # character
         character_on = scene.get("character")
@@ -956,7 +1022,19 @@ class PixelRenderer:
                 ],
             })
         if not phrases:
-            return
+            text = str(scene.get("text") or "").strip()
+            if not text:
+                return
+            # Safety net: never ship a pixel scene without subtitles, even if
+            # the TTS timeline is missing for this render.
+            words = [w for w in text.split() if w]
+            duration = max(1.2, end - start)
+            step = duration / max(1, len(words))
+            timed = [
+                {"w": w, "display": w, "t": i * step, "d": step * 0.9}
+                for i, w in enumerate(words)
+            ]
+            phrases = [{"t0": 0.0, "t1": duration, "text": text, "words": timed}]
         self._caption.phrases = phrases
         self._caption.p_starts = [float(p["t0"]) for p in phrases]
         self._caption.duration = max(0.1, end - start)
