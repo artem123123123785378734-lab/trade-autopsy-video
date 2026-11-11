@@ -6,7 +6,6 @@ runs the same pipeline as the local studio, then copies the final files to
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import shutil
@@ -15,7 +14,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from studio import pipeline, tts
+from studio import pipeline
 
 
 def _reuse_clips(scenes: list, base_job_id: str | None, base_scene_count: int | None,
@@ -84,13 +83,6 @@ def main(payload_path: str) -> None:
     if mode == "scene" and scenes and isinstance(scene_index, int):
         reuse = _reuse_clips(scenes, base_job_id, base_scene_count, workdir)
 
-    if settings["provider"] == "edge":
-        try:
-            asyncio.run(tts._edge_synth("Проверка связи.", settings["voice"], 0, 0, retries=2))
-        except Exception as exc:
-            print("EDGE_PREFLIGHT_FALLBACK", type(exc).__name__, str(exc)[:200], flush=True)
-            settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0)
-
     def run_render():
         return pipeline.generate(
             project_id=project_id,
@@ -114,6 +106,9 @@ def main(payload_path: str) -> None:
         settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0)
         provider_used = "piper"
         voice_used = "ru_RU-dmitri-medium"
+        # Piper changes the audio length, so pre-rendered clips from an Edge
+        # attempt cannot be reused: rebuild the whole video to keep A/V sync.
+        reuse = None
         info = run_render()
     out = Path("out")
     out.mkdir(parents=True, exist_ok=True)

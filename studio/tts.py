@@ -407,9 +407,10 @@ def write_srt(phrases: list[dict], path: Path) -> None:
 def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
                    force: bool = False) -> dict:
     scenes = plan["scenes"]
-    phrases: list[dict] = []
-    cursor = 0.0
     total = len(scenes)
+    synths: list[dict] = []
+    base: list[float] = []
+    locked: list[bool] = []
     for i, scene in enumerate(scenes):
         if cancel and cancel():
             raise RuntimeError("Генерация отменена")
@@ -422,15 +423,44 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
         else:
             info = {"wav": None, "words": [], "dur": 0.0, "cached": False,
                     "provider": settings.get("provider")}
-        lead = LEAD_PAD
-        dur = info["dur"]
-        scene_dur = max(3.1, lead + dur + TAIL_PAD)
+        scene_dur = max(3.1, LEAD_PAD + info["dur"] + TAIL_PAD)
         try:
             override = float(scene.get("duration_override") or 0)
         except (TypeError, ValueError):
             override = 0
         if override > scene_dur:
             scene_dur = override
+        synths.append(info)
+        base.append(scene_dur)
+        locked.append(override >= scene_dur > 0 and override > 0.001)
+
+    # Short scripts must still reach the 45 s minimum. Instead of freezing on
+    # a long outro, let each scene breathe after its line: the pacing stays
+    # even, captions remain in sync, and the character keeps animating.
+    minimum = 45.0
+    holds = [0.0] * len(scenes)
+    if scenes:
+        missing = minimum - sum(base)
+        free = [i for i in range(len(scenes)) if not locked[i]]
+        step = 0.2
+        while missing > 0.05:
+            room = [i for i in free if holds[i] < 2.4 - 0.001]
+            if not room:
+                break
+            for i in room:
+                if missing <= 0.05:
+                    break
+                add = min(step, 2.4 - holds[i], missing)
+                holds[i] += add
+                missing -= add
+
+    phrases: list[dict] = []
+    cursor = 0.0
+    for i, scene in enumerate(scenes):
+        info = synths[i]
+        lead = LEAD_PAD
+        dur = info["dur"]
+        scene_dur = base[i] + holds[i]
         scene["start"] = round(cursor, 3)
         scene["end"] = round(cursor + scene_dur, 3)
         scene["place"] = round(cursor + lead, 3)
@@ -438,6 +468,7 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
         scene["dur"] = round(dur, 3)
         scene["rate_used"] = settings.get("rate", 0)
         scene["cached"] = info.get("cached", False)
+        spoken = speech_text(scene["text"])
         tts_words = info.get("words", [])
         if spoken != scene["text"] or _needs_fallback(scene["text"], tts_words):
             # Edge occasionally merges numbers ("4 884") or drops words from
@@ -458,16 +489,8 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
 
     duration = cursor
     # Keep the format inside 45-80 seconds wherever possible.
-    minimum = 45.0
-    if duration < minimum:
+    if duration < minimum - 0.01:
         deficit = minimum - duration
-        # First, let the last scene breathe (max +2.2 s).
-        extra = min(deficit, 2.2)
-        if scenes:
-            scenes[-1]["end"] = round(scenes[-1]["end"] + extra, 3)
-            cursor += extra
-            duration = cursor
-            deficit -= extra
         if deficit > 0.2:
             outro = {
                 "index": len(scenes),
@@ -487,7 +510,7 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
                 "rows": [],
                 "est": 0.0,
                 "start": round(cursor, 3),
-                "end": round(cursor + min(4.0, max(2.6, deficit)), 3),
+                "end": round(cursor + min(12.0, max(2.6, deficit)), 3),
                 "place": round(cursor, 3),
                 "dur": 0.0,
                 "audio": None,
