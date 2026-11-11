@@ -46,12 +46,8 @@ jobs:
 
       - name: Install graphics libraries
         run: |
-          # GitHub runners are on Azure; the default archive mirror is often
-          # slow or unreachable. Use the Azure mirror and hard timeouts.
-          sudo grep -rlE 'archive\.ubuntu\.com|security\.ubuntu\.com' /etc/apt \
-            | xargs -r sudo sed -i \
-              -e 's/archive\.ubuntu\.com/azure.archive.ubuntu.com/g' \
-              -e 's/security\.ubuntu\.com/azure.archive.ubuntu.com/g'
+          # The runner image already points at the Azure mirror. Keep the
+          # timeouts so a temporary network problem cannot stall the render.
           timeout 180 sudo apt-get update -o Acquire::Retries=2 \
             -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
           timeout 240 sudo apt-get install -y --no-install-recommends \
