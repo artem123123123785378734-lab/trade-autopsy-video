@@ -6,6 +6,7 @@ runs the same pipeline as the local studio, then copies the final files to
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import shutil
@@ -14,7 +15,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from studio import pipeline
+from studio import pipeline, tts
 
 
 def _reuse_clips(scenes: list, base_job_id: str | None, base_scene_count: int | None,
@@ -56,17 +57,23 @@ def main(payload_path: str) -> None:
     scene_index = data.get("scene_index")
     base_job_id = data.get("base_job_id")
     base_scene_count = data.get("base_scene_count")
-    # GitHub-hosted runners use the offline Piper runtime bundled by the
-    # workflow. Dmitri and Denis are CC0 voices, so they are safe for the
-    # commercial studio; Irina/Ruslan are intentionally not exposed online.
-    allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
+    # Prefer Microsoft Edge neural voices. They are free and much more natural
+    # than Piper. If Microsoft is unreachable from the runner, fall back to the
+    # bundled CC0 Piper voices automatically.
+    edge_allowed = {"ru-RU-DmitryNeural", "ru-RU-SvetlanaNeural"}
+    piper_allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
+    provider = str(settings.get("provider") or "edge")
+    if provider not in ("edge", "piper"):
+        provider = "edge"
     voice = str(settings.get("voice") or "")
     quality = str(settings.get("quality") or "quality")
     if quality not in ("fast", "quality", "ultra"):
         quality = "quality"
-    settings.update(provider="piper", voice=voice if voice in allowed else "ru_RU-dmitri-medium",
-                    pitch=0, quality=quality, auto_rate=True)
-    settings["voice_used"] = settings["voice"]
+    if provider == "edge":
+        voice = voice if voice in edge_allowed else "ru-RU-DmitryNeural"
+    else:
+        voice = voice if voice in piper_allowed else "ru_RU-dmitri-medium"
+    settings.update(provider=provider, voice=voice, pitch=0, quality=quality, auto_rate=True)
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
     project_id = f"gh_{job_id}"
@@ -77,16 +84,37 @@ def main(payload_path: str) -> None:
     if mode == "scene" and scenes and isinstance(scene_index, int):
         reuse = _reuse_clips(scenes, base_job_id, base_scene_count, workdir)
 
-    info = pipeline.generate(
-        project_id=project_id,
-        title=title,
-        script=script,
-        settings=settings,
-        render_id=render_id,
-        scenes_override=scenes,
-        scene_index=scene_index if mode == "scene" and reuse is not None else None,
-        reuse_clips=reuse,
-    )
+    if settings["provider"] == "edge":
+        try:
+            asyncio.run(tts._edge_synth("Проверка связи.", settings["voice"], 0, 0, retries=2))
+        except Exception as exc:
+            print("EDGE_PREFLIGHT_FALLBACK", type(exc).__name__, str(exc)[:200], flush=True)
+            settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0)
+
+    def run_render():
+        return pipeline.generate(
+            project_id=project_id,
+            title=title,
+            script=script,
+            settings=settings,
+            render_id=render_id,
+            scenes_override=scenes,
+            scene_index=scene_index if mode == "scene" and reuse is not None else None,
+            reuse_clips=reuse,
+        )
+
+    provider_used = settings["provider"]
+    voice_used = settings["voice"]
+    try:
+        info = run_render()
+    except Exception as exc:
+        if settings["provider"] != "edge":
+            raise
+        print("EDGE_TTS_FALLBACK", type(exc).__name__, str(exc)[:300], flush=True)
+        settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0)
+        provider_used = "piper"
+        voice_used = "ru_RU-dmitri-medium"
+        info = run_render()
     out = Path("out")
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(info["video"], out / "video.mp4")
@@ -103,8 +131,8 @@ def main(payload_path: str) -> None:
         "scenes": info.get("scenes"),
         "size": info.get("size"),
         "format": info.get("format"),
-        "voice": settings.get("voice"),
-        "provider": settings.get("provider"),
+        "voice": voice_used,
+        "provider": provider_used,
         "quality": settings.get("quality"),
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
