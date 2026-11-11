@@ -25,16 +25,15 @@ jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    container:
+      # Playwright's Python image already includes libGL/EGL/GLES and the
+      # common media libraries. Avoid apt mirrors entirely.
+      image: mcr.microsoft.com/playwright/python:v1.49.1-jammy
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: python -m pip install -r requirements.txt
 
       - name: Configure FFmpeg
         run: |
@@ -43,24 +42,6 @@ jobs:
           FFMPEG_BIN="$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
           echo "FFMPEG=$FFMPEG_BIN" >> "$GITHUB_ENV"
           "$FFMPEG_BIN" -hide_banner -version | head -n 1
-
-      - name: Install graphics libraries
-        run: |
-          # The runner image uses a mirrorlist that can point at an
-          # unreachable Azure mirror. Replace it with the public archive.
-          sudo rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
-          sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
-          deb https://archive.ubuntu.com/ubuntu resolute main restricted universe multiverse
-          deb https://archive.ubuntu.com/ubuntu resolute-updates main restricted universe multiverse
-          deb https://archive.ubuntu.com/ubuntu resolute-backports main restricted universe multiverse
-          deb https://archive.ubuntu.com/ubuntu resolute-security main restricted universe multiverse
-          EOF
-          timeout 180 sudo apt-get update -o Acquire::Retries=2 \
-            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
-          timeout 240 sudo apt-get install -y --no-install-recommends \
-            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
-            libgl1 libglib2.0-0 libegl1 libgles2
-          ldconfig -p | grep -E 'libGL\.so|libEGL\.so|libGLESv2\.so' || true
 
       - name: Verify Skia graphics libraries
         run: |
