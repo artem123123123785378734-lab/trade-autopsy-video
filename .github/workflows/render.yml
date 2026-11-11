@@ -35,10 +35,15 @@ jobs:
 
       - name: Install FFmpeg
         run: |
-          # ubuntu-latest already ships ffmpeg and most GL libs. Do not let a
-          # slow apt mirror stall the whole render for 20+ minutes.
-          timeout 180 sudo apt-get update -o Acquire::Retries=2 || true
-          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 libegl1 libgles2 || true
+          # ubuntu-latest already ships ffmpeg and most GL libs. Never let a
+          # slow or unreachable apt mirror stall the whole render.
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            timeout 120 sudo apt-get update -o Acquire::Retries=1 || true
+            timeout 180 sudo apt-get install -y --no-install-recommends ffmpeg || true
+          fi
+          for pkg in libgl1 libglib2.0-0 libegl1 libgles2; do
+            dpkg -s "$pkg" >/dev/null 2>&1 || timeout 180 sudo apt-get install -y --no-install-recommends "$pkg" || true
+          done
           command -v ffmpeg
 
       - name: Install Python dependencies
