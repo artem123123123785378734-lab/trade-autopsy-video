@@ -46,10 +46,15 @@ jobs:
 
       - name: Install graphics libraries
         run: |
-          # The Azure mirror can be unreachable from some runners. Try the
-          # public Ubuntu archive and keep hard timeouts on every step.
-          sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
-            -print0 | xargs -0 -r sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g'
+          # The runner image uses a mirrorlist that can point at an
+          # unreachable Azure mirror. Replace it with the public archive.
+          sudo rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
+          sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
+          deb https://archive.ubuntu.com/ubuntu resolute main restricted universe multiverse
+          deb https://archive.ubuntu.com/ubuntu resolute-updates main restricted universe multiverse
+          deb https://archive.ubuntu.com/ubuntu resolute-backports main restricted universe multiverse
+          deb https://archive.ubuntu.com/ubuntu resolute-security main restricted universe multiverse
+          EOF
           timeout 180 sudo apt-get update -o Acquire::Retries=2 \
             -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
           timeout 240 sudo apt-get install -y --no-install-recommends \
