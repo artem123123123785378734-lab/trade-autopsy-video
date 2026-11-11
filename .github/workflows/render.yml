@@ -44,6 +44,13 @@ jobs:
           echo "FFMPEG=$FFMPEG_BIN" >> "$GITHUB_ENV"
           "$FFMPEG_BIN" -hide_banner -version | head -n 1
 
+      - name: Install graphics libraries
+        run: |
+          # No apt-get update: package lists are already present on the image.
+          # Timeout prevents a broken mirror from stalling the render.
+          timeout 240 sudo apt-get install -y --no-install-recommends \
+            libgl1 libglib2.0-0 libegl1 libgles2 || true
+
       - name: Verify Skia graphics libraries
         run: |
           python - <<'PY'
