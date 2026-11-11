@@ -46,10 +46,18 @@ jobs:
 
       - name: Install graphics libraries
         run: |
-          # No apt-get update: package lists are already present on the image.
-          # Timeout prevents a broken mirror from stalling the render.
+          # GitHub runners are on Azure; the default archive mirror is often
+          # slow or unreachable. Use the Azure mirror and hard timeouts.
+          sudo grep -rlE 'archive\.ubuntu\.com|security\.ubuntu\.com' /etc/apt \
+            | xargs -r sudo sed -i \
+              -e 's/archive\.ubuntu\.com/azure.archive.ubuntu.com/g' \
+              -e 's/security\.ubuntu\.com/azure.archive.ubuntu.com/g'
+          timeout 180 sudo apt-get update -o Acquire::Retries=2 \
+            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
           timeout 240 sudo apt-get install -y --no-install-recommends \
-            libgl1 libglib2.0-0 libegl1 libgles2 || true
+            -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
+            libgl1 libglib2.0-0 libegl1 libgles2
+          ldconfig -p | grep -E 'libGL\.so|libEGL\.so|libGLESv2\.so' || true
 
       - name: Verify Skia graphics libraries
         run: |
