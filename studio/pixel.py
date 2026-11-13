@@ -1081,6 +1081,11 @@ class PixelRenderer:
         if ch.get("accessory") == "glasses":
             gx = head_x + 3 + int((math.sin(t * 2.4) + 1) * 1.5)
             _pixel(c, x + gx * s, y + 11 * s, (255, 255, 255), 150)
+        hair = ch.get("hair")
+        if hair:
+            sway = int(round(math.sin(t * 2.2 + scene_index) * 1.2))
+            _rect(c, x + (head_x - 2) * s + sway, y + 7 * s, 1 * s, 4 * s, hair, 190)
+            _rect(c, x + (head_x + 15) * s + sway, y + 8 * s, 1 * s, 3 * s, hair, 170)
 
     def _draw_voice_bars(self, c, x, y, char_w, scale, t, env):
         base_y = 302
@@ -1901,10 +1906,64 @@ class PixelRenderer:
             c.scale(1, -1)
             _draw_sprite(c, self.sheet, x, y, 0, self.nearest, scale, 34)
             c.restore()
+            body_dx = 0.0
+            if anim in ("idle", "talk", "explain", "think") or talking:
+                body_dx = math.sin(t * 0.9 + scene_index) * 0.8 * scale
+            elif anim == "walk":
+                body_dx = math.sin(t * 3.6) * 0.6 * scale
+            elif anim in ("victory", "happy"):
+                body_dx = math.sin(t * 5.0) * 0.5 * scale
+            elif anim in ("error", "scared"):
+                body_dx = math.sin(t * 18.0) * 0.5 * scale
             _draw_limbs(c, x, y, scale, self.character, anim, t, env, part="legs")
-            _draw_sprite(c, self.sheet, x, y, 0, self.nearest, scale)
-            _draw_limbs(c, x, y, scale, self.character, anim, t, env, part="arms")
-            self._draw_face_overlay(c, x, y, scale, self.character, t, anim, env, scene_index)
+            breath = 1.0 + 0.006 * math.sin(t * 2.1)
+            waist_x = x + body_dx + 20 * scale
+            waist_y = y + 40 * scale
+            c.save()
+            c.translate(waist_x, waist_y)
+            c.scale(1.0, breath)
+            c.translate(-waist_x, -waist_y)
+            _draw_sprite_part(c, self.sheet, 0, 21, FRAME_W, FRAME_H - 21,
+                              x + body_dx, y + 21 * scale, self.nearest, scale)
+            c.restore()
+            _draw_limbs(c, x + body_dx, y, scale, self.character, anim, t, env, part="arms")
+            # articulated head: tilt, nod and reaction
+            head_dx = 0.0
+            head_dy = 0.0
+            tilt = math.sin(t * 0.9) * 0.9
+            if anim in ("point", "show"):
+                head_dx = 0.7 * scale
+                tilt = -1.6
+            elif anim == "think":
+                head_dx = -0.5 * scale
+                head_dy = 0.4 * scale
+                tilt = 2.6
+            elif anim in ("error", "scared"):
+                head_dx = math.sin(t * 20) * 0.7 * scale
+                head_dy = -0.4 * scale
+                tilt = math.sin(t * 18) * 1.5
+            elif anim in ("victory", "happy"):
+                head_dy = -0.4 * scale
+                tilt = -1.5
+            elif talking:
+                head_dy = -env * 1.0 * scale
+                tilt = math.sin(t * 2.2) * 0.6
+            neck_x = x + body_dx + 20 * scale
+            neck_y = y + 21 * scale
+            # solid neck column stays with the torso, the head moves above it
+            _rect(c, x + body_dx + 18 * scale, y + 17.5 * scale, 4 * scale, 6 * scale,
+                  self.character["skin"], 255)
+            _rect(c, x + body_dx + 18 * scale, y + 21 * scale, 4 * scale, 2 * scale,
+                  gfx.blend(self.character["skin"], (0, 0, 0), 0.16), 180)
+            c.save()
+            c.translate(neck_x, neck_y)
+            c.rotate(tilt)
+            c.translate(-neck_x, -neck_y)
+            _draw_sprite_part(c, self.sheet, 0, 0, FRAME_W, 21,
+                              x + body_dx + head_dx, y + head_dy, self.nearest, scale)
+            self._draw_face_overlay(c, x + body_dx + head_dx, y + head_dy, scale,
+                                    self.character, t, anim, env, scene_index)
+            c.restore()
             if talking:
                 self._draw_voice_bars(c, x, y, char_w, scale, t, env)
         c.restore()
@@ -2230,6 +2289,16 @@ def _draw_talk_overlay(c, x, y, scale: float, ch: dict, t: float):
         _rect(c, ex + i * step, ey - h, w, h, accent, 205)
 
 
+def _draw_sprite_part(c, sheet, sx, sy, sw, sh, x, y, sampling, scale: float = 1.0, alpha: int = 255):
+    src = skia.Rect.MakeXYWH(sx, sy, sw, sh)
+    dst = skia.Rect.MakeXYWH(float(x), float(y), sw * scale, sh * scale)
+    paint = None
+    if alpha < 255:
+        paint = skia.Paint()
+        paint.setAlphaf(max(0.0, min(1.0, alpha / 255.0)))
+    c.drawImageRect(sheet, src, dst, sampling, paint)
+
+
 def _draw_sprite(c, sheet, x, y, frame: int, sampling, scale: float = 1.0, alpha: int = 255):
     src = skia.Rect.MakeXYWH(frame * FRAME_W, 0, FRAME_W, FRAME_H)
     dst = skia.Rect.MakeXYWH(float(x), float(y), FRAME_W * scale, FRAME_H * scale)
@@ -2331,6 +2400,10 @@ def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
         hip_l = (body_x + 3, 39)
         hip_r = (body_x + body_w - 3, 39)
         a_l, e_l, a_r, e_r = 88, 4, 92, 4
+        if anim in ("idle", "talk", "explain", "think", "point", "show"):
+            shift = math.sin(t * 0.9)
+            a_l, e_l = 88 + shift * 2.0, 5 + max(0.0, shift) * 4.0
+            a_r, e_r = 92 - shift * 2.0, 5 + max(0.0, -shift) * 4.0
         if anim == "walk":
             swing = math.sin(t * 7.2) * 24
             a_l, e_l = 88 + swing, max(0, -swing * 0.45)
@@ -2353,32 +2426,33 @@ def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
     a_l, e_l = 98 + sway * 0.4, 6
     a_r, e_r = 82 - sway * 0.4, 6
     if anim in ("point", "show"):
-        a_r, e_r = 4, -2
+        a_r, e_r = 4 + 2.5 * math.sin(t * 3.2), -2 + 3 * math.sin(t * 3.2 + 0.5)
         a_l, e_l = 100, 8
     elif anim in ("wave", "happy", "victory", "scared"):
-        a_r, e_r = -66, -20
+        a_r, e_r = -66 + 4 * math.sin(t * 6.0), -20
         a_l, e_l = 100, 8
         if anim in ("victory", "scared", "happy"):
-            a_l, e_l = -114, 18
+            a_l, e_l = -114 + 4 * math.sin(t * 6.0 + 0.8), 18
     elif anim == "think":
-        a_r, e_r = -118, -68
+        a_r, e_r = -118 + 2 * math.sin(t * 2.0), -68 + 3 * math.sin(t * 2.0 + 0.4)
         a_l, e_l = 100, 8
     elif anim == "sad":
-        a_l, e_l = 108, 16
-        a_r, e_r = 72, -16
+        a_l, e_l = 108 + 2 * math.sin(t * 1.2), 16
+        a_r, e_r = 72 - 2 * math.sin(t * 1.2), -16
     elif anim == "error":
-        a_l, e_l = 148, 18
-        a_r, e_r = 32, -18
+        a_l, e_l = 148 + 4 * math.sin(t * 20.0), 18
+        a_r, e_r = 32 - 4 * math.sin(t * 20.0), -18
     elif anim == "walk":
         swing = math.sin(t * 7.2) * 26
-        a_l, e_l = 92 + swing, 8
-        a_r, e_r = 92 - swing, 8
+        a_l, e_l = 92 + swing, 8 + max(0, -swing) * 0.4
+        a_r, e_r = 92 - swing, 8 + max(0, swing) * 0.4
     elif anim in ("talk", "explain"):
-        a_r, e_r = 58 + 8 * math.sin(t * 3.4) + env * 18, 46
-        a_l, e_l = 100, 8
+        a_r, e_r = (58 + 12 * math.sin(t * 2.2) + env * 20,
+                    46 + 8 * math.sin(t * 2.2 + 0.6))
+        a_l, e_l = 100 + 4 * math.sin(t * 1.4), 10
     else:
-        a_l, e_l = 96 + sway * 0.5, 8
-        a_r, e_r = 84 - sway * 0.5, 8
+        a_l, e_l = 96 + sway * 0.6, 10 + 4 * math.sin(t * 1.3)
+        a_r, e_r = 84 - sway * 0.6, 10 + 4 * math.sin(t * 1.3 + 0.7)
     arm(sh_l, a_l, e_l)
     arm(sh_r, a_r, e_r)
 
