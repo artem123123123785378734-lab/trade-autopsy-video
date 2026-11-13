@@ -555,9 +555,11 @@ class PixelRenderer:
         except Exception:
             self.vignette = None
         try:
-            self.grain = gfx.make_grain(5, (540, 960), seed=round(time.time()) % 997)
+            self.grain = gfx.make_grain(1, (540, 960), seed=round(time.time()) % 997)
         except Exception:
             self.grain = []
+        self.grain_paint = skia.Paint()
+        self.grain_paint.setAlphaf(0.55)
 
     def set_audio(self, path: Path) -> None:
         """Voice envelope per video frame — drives mouth, head and equalizer."""
@@ -1415,13 +1417,13 @@ class PixelRenderer:
         sweep = (t * 70) % self.out_h
         _rect(full, 0, sweep, self.out_w, 2, (255, 255, 255), 9)
         if self.grain:
-            img = self.grain[int(t * 12) % len(self.grain)]
+            img = self.grain[0]
             full.drawImageRect(
                 img,
                 skia.Rect.MakeWH(540, 960),
                 skia.Rect.MakeWH(self.out_w, self.out_h),
                 self.linear,
-                None,
+                self.grain_paint,
             )
         return self.full
 
@@ -1537,13 +1539,13 @@ def _encode_scene(renderer: PixelRenderer, scene_index: int, duration: float,
                   path: Path, fast: bool, progress=None, cancel=None) -> Path:
     total = max(1, int(round(duration * config.FPS)))
     if renderer.quality == "fast":
-        preset, crf = "ultrafast", 23
+        preset, crf = "ultrafast", 24
         x264_params = ""
     elif renderer.quality == "ultra":
-        preset, crf = "slow", 15
+        preset, crf = "slow", 17
         x264_params = "aq-mode=3:aq-strength=1.15:deblock=-1,-1"
     else:
-        preset, crf = "medium", 16
+        preset, crf = "slow", 20
         x264_params = "aq-mode=3:aq-strength=1.05:deblock=-1,-1"
     cmd = [
         config.FFMPEG, "-y", "-hide_banner", "-loglevel", "error",
