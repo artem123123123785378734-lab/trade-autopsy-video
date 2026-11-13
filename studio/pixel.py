@@ -66,6 +66,236 @@ ANIMATIONS = (
     "think", "scared", "show", "victory", "error",
 )
 
+TOPIC_KEYWORDS = {
+    "trading": (
+        "сделк", "сделок", "сделка", "сделки", "торгов", "журнал", "трейд",
+        "прибыл", "убыт", "депозит", "форекс", "крипт", "битко", "btc",
+        "pnl", "просадк", "стоп-лосс", "тейк-профит", "лонг", "шорт",
+        "свеч", "бирж", "трейдер", "минус", "профит", "позици",
+    ),
+    "fitness": (
+        "трениров", "фитнес", "зал", "мышц", "жир", "похуд", "калор",
+        "белок", "упражн", "спорт", "бег", "штанг", "пресс", "отжим",
+        "присед", "гантел", "кардио", "растяж",
+    ),
+    "cooking": (
+        "рецепт", "готов", "кухн", "блюд", "ингредиент", "духовк", "суп",
+        "мясо", "тесто", "завтрак", "обед", "ужин", "салат", "соус",
+        "выпеч", "специ", "порци",
+    ),
+    "realestate": (
+        "недвиж", "квартир", "ипотек", "аренд", "новострой", "риелтор",
+        "участок", "жилье", "недвижим", "дом", "коттедж", "планировк",
+    ),
+    "education": (
+        "урок", "школ", "учеб", "курс", "экзамен", "студент", "лекц",
+        "знани", "обучен", "книг", "конспект", "задач", "репетитор",
+    ),
+    "tech": (
+        "код", "программ", "разработ", "сервер", "api", "нейросет",
+        "алгоритм", "сайт", "приложен", "баг", "данн", "ит-",
+    ),
+    "health": (
+        "здоров", "врач", "симптом", "лечен", "болезн", "клиник",
+        "давлен", "сердц", "таблет", "иммунитет", "пульс", "сон",
+    ),
+    "travel": (
+        "путешеств", "билет", "отел", "тур", "страна", "самолет",
+        "чемодан", "виза", "экскурс", "поездк", "рейс", "курорт",
+    ),
+    "business": (
+        "бизнес", "маркет", "продаж", "клиент", "воронк", "бренд",
+        "стартап", "стратег", "продукт", "конверси", "выручк", "лид",
+    ),
+}
+
+COLOR_KEYS = {
+    "accent": ("ACCENT",),
+    "accent2": ("ACCENT2",),
+    "green": ("GREEN",),
+    "bad": ("BAD",),
+    "highlight": ("HIGHLIGHT",),
+}
+
+TOPIC_PROFILES = {
+    "trading": {
+        "tint": (64, 140, 255), "chart": "candles", "prop": "trading",
+        "visual_by_kind": {
+            "hook": "chart", "problem": "board", "insight": "room",
+            "solution": "terminal", "cta": "room", "chart": "chart",
+            "stat": "chart", "bars": "chart", "dashboard": "terminal",
+            "terminal": "terminal", "checklist": "board",
+            "timeline": "board", "compare": "board", "quote": "room",
+            "notification": "phone", "diagram": "phone",
+        },
+        "cards": [("СДЕЛКИ", "12", "accent"), ("ВИНРЕЙТ", "58%", "green")],
+        "cards_by_kind": {
+            "hook": [("МИНУС", "-$420", "bad"), ("ПРИЧИНА", "?", "accent")],
+            "problem": [("ОШИБКИ", "3", "bad"), ("РИСК", "3 : 1", "accent")],
+            "insight": [("СДЕЛКИ", "12", "accent"), ("ВИНРЕЙТ", "58%", "green")],
+            "solution": [("PNL", "+$1 240", "green"), ("РИСК", "1 : 3", "accent")],
+            "cta": [("ЖУРНАЛ", "7 ДНЕЙ", "accent"), ("СТАРТ", "СЕГОДНЯ", "green")],
+        },
+        "ticker": ("BTC +2.4%    ETH -1.1%    S&P +0.6%    EUR/USD 1.08    "
+                   "GOLD +0.3%    NASDAQ -0.4%"),
+    },
+    "fitness": {
+        "tint": (255, 150, 70), "chart": "progress", "prop": "fitness",
+        "visual_by_kind": {
+            "hook": "room", "problem": "chart", "insight": "chart",
+            "solution": "chart", "cta": "room", "chart": "chart",
+            "stat": "chart", "bars": "chart", "checklist": "board",
+        },
+        "cards": [("ТРЕНИРОВКИ", "4", "accent"), ("ПРОГРЕСС", "+18%", "green")],
+        "cards_by_kind": {
+            "hook": [("ЦЕЛЬ", "-5 КГ", "accent"), ("СРОК", "8 НЕДЕЛЬ", "accent2")],
+            "problem": [("СРЫВЫ", "3", "bad"), ("МОТИВАЦИЯ", "12%", "accent")],
+            "insight": [("ТРЕНИРОВКИ", "4", "accent"), ("ПУЛЬС", "128", "green")],
+            "solution": [("ПРОГРЕСС", "+18%", "green"), ("СИЛА", "+24%", "accent")],
+            "cta": [("СТАРТ", "СЕГОДНЯ", "accent"), ("ПЛАН", "8 НЕДЕЛЬ", "green")],
+        },
+        "ticker": "ШАГИ 8 240    ПУЛЬС 128    КАЛОРИИ 420    СОН 7.5 Ч",
+    },
+    "cooking": {
+        "tint": (255, 182, 92), "chart": "timer", "prop": "cooking",
+        "visual_by_kind": {
+            "hook": "room", "problem": "chart", "insight": "chart",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("РЕЦЕПТ", "3", "accent"), ("ВРЕМЯ", "25 МИН", "accent2")],
+        "cards_by_kind": {
+            "hook": [("БЛЮДО", "3", "accent"), ("ВРЕМЯ", "25 МИН", "accent2")],
+            "problem": [("ОШИБКИ", "2", "bad"), ("ВКУС", "?", "accent")],
+            "insight": [("ПОРЦИИ", "4", "accent"), ("ККАЛ", "420", "green")],
+            "cta": [("ГОТОВИТЬ", "СЕЙЧАС", "accent"), ("ПОРЦИИ", "4", "green")],
+        },
+        "ticker": "БЕЛКИ 30    ЖИРЫ 12    УГЛЕВОДЫ 45    ККАЛ 420",
+    },
+    "realestate": {
+        "tint": (60, 200, 160), "chart": "line", "prop": "realestate",
+        "visual_by_kind": {
+            "hook": "room", "problem": "chart", "insight": "chart",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("ОБЪЕКТЫ", "7", "accent"), ("ДОХОД", "8%", "green")],
+        "cards_by_kind": {
+            "hook": [("ЦЕНА", "$240K", "accent"), ("СТАВКА", "6.2%", "accent2")],
+            "problem": [("РИСКИ", "3", "bad"), ("ЛИКВИДНОСТЬ", "?", "accent")],
+            "insight": [("АРЕНДА", "$1 200", "accent"), ("ДОХОД", "8%", "green")],
+            "cta": [("СМОТРЕТЬ", "СЕЙЧАС", "accent"), ("ОБЪЕКТЫ", "7", "green")],
+        },
+        "ticker": "СТАВКА 6.2%    ЦЕНА $240K    АРЕНДА $1 200    ДОХОД 8%",
+    },
+    "education": {
+        "tint": (255, 206, 92), "chart": "progress", "prop": "education",
+        "visual_by_kind": {
+            "hook": "board", "problem": "board", "insight": "chart",
+            "solution": "board", "cta": "room",
+        },
+        "cards": [("УРОК", "3", "accent"), ("ПРОГРЕСС", "68%", "green")],
+        "cards_by_kind": {
+            "hook": [("ТЕМА", "3", "accent"), ("УРОВЕНЬ", "A1", "accent2")],
+            "problem": [("ОШИБКИ", "4", "bad"), ("ПРОГРЕСС", "32%", "accent")],
+            "insight": [("ЗАДАЧИ", "12", "accent"), ("ПРОГРЕСС", "68%", "green")],
+            "cta": [("УЧИТЬСЯ", "СЕГОДНЯ", "accent"), ("КУРС", "8 НЕДЕЛЬ", "green")],
+        },
+        "ticker": "УРОК 3    ЗАДАЧИ 12    ЭКЗАМЕН 85%    СЕРИЯ 7 ДНЕЙ",
+    },
+    "tech": {
+        "tint": (150, 110, 255), "chart": "line", "prop": "tech",
+        "visual_by_kind": {
+            "hook": "terminal", "problem": "chart", "insight": "terminal",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("СЕРВЕР", "99.9%", "green"), ("ЗАПРОСЫ", "1.2K", "accent")],
+        "cards_by_kind": {
+            "hook": [("API", "120 MS", "accent"), ("CPU", "42%", "accent2")],
+            "problem": [("ОШИБКИ", "5", "bad"), ("ЛАТЕНСИЯ", "480 MS", "accent")],
+            "insight": [("ЗАПРОСЫ", "1.2K", "accent"), ("АПТАЙМ", "99.9%", "green")],
+            "solution": [("ЛАТЕНСИЯ", "120 MS", "green"), ("CPU", "42%", "accent")],
+            "cta": [("ЗАПУСК", "СЕЙЧАС", "accent"), ("СЕРВЕР", "99.9%", "green")],
+        },
+        "ticker": "API 120MS    CPU 42%    RAM 68%    UPTIME 99.9%",
+    },
+    "health": {
+        "tint": (40, 214, 176), "chart": "ecg", "prop": "health",
+        "visual_by_kind": {
+            "hook": "room", "problem": "chart", "insight": "chart",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("ПУЛЬС", "72", "green"), ("СОН", "7.5 Ч", "accent")],
+        "cards_by_kind": {
+            "hook": [("ПУЛЬС", "72", "green"), ("ДАВЛЕНИЕ", "120/80", "accent")],
+            "problem": [("РИСК", "3", "bad"), ("СОН", "5.2 Ч", "accent")],
+            "insight": [("ШАГИ", "8 240", "accent"), ("ПУЛЬС", "72", "green")],
+            "cta": [("ПРОВЕРИТЬ", "СЕЙЧАС", "accent"), ("НОРМА", "72", "green")],
+        },
+        "ticker": "ПУЛЬС 72    ДАВЛЕНИЕ 120/80    ШАГИ 8 240    СОН 7.5 Ч",
+    },
+    "travel": {
+        "tint": (255, 170, 90), "chart": "line", "prop": "travel",
+        "visual_by_kind": {
+            "hook": "room", "problem": "chart", "insight": "chart",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("ДНЕЙ", "7", "accent"), ("БЮДЖЕТ", "$1 200", "green")],
+        "cards_by_kind": {
+            "hook": [("РЕЙС", "SU 204", "accent"), ("ОТЕЛЬ", "4*", "accent2")],
+            "problem": [("РИСКИ", "2", "bad"), ("ВИЗА", "?", "accent")],
+            "insight": [("ДНЕЙ", "7", "accent"), ("БЮДЖЕТ", "$1 200", "green")],
+            "cta": [("ЛЕТЕТЬ", "СКОРО", "accent"), ("МЕСТА", "2", "green")],
+        },
+        "ticker": "РЕЙС SU 204    ОТЕЛЬ 4*    ВИЗА OK    БЮДЖЕТ $1 200",
+    },
+    "business": {
+        "tint": (80, 140, 255), "chart": "funnel", "prop": "business",
+        "visual_by_kind": {
+            "hook": "board", "problem": "chart", "insight": "board",
+            "solution": "chart", "cta": "room",
+        },
+        "cards": [("ПРОДАЖИ", "24", "accent"), ("КОНВЕРСИЯ", "18%", "green")],
+        "cards_by_kind": {
+            "hook": [("ЛИДЫ", "120", "accent"), ("СДЕЛКИ", "24", "accent2")],
+            "problem": [("ОТКАЗЫ", "18", "bad"), ("КОНВЕРСИЯ", "6%", "accent")],
+            "insight": [("ЛИДЫ", "120", "accent"), ("КОНВЕРСИЯ", "18%", "green")],
+            "solution": [("ВЫРУЧКА", "$8K", "green"), ("СДЕЛКИ", "24", "accent")],
+            "cta": [("ЗАПУСК", "СЕЙЧАС", "accent"), ("ПЛАН", "30 ДНЕЙ", "green")],
+        },
+        "ticker": "ЛИДЫ 120    СДЕЛКИ 24    КОНВЕРСИЯ 18%    ВЫРУЧКА $8K",
+    },
+    "story": {
+        "tint": (120, 150, 220), "chart": "bars", "prop": "story",
+        "visual_by_kind": {
+            "hook": "room", "problem": "board", "insight": "chart",
+            "solution": "room", "cta": "room",
+        },
+        "cards": [("ГЛАВНОЕ", "3", "accent"), ("ИТОГ", "1", "green")],
+        "cards_by_kind": {
+            "hook": [("ИДЕЯ", "1", "accent"), ("ВОПРОС", "?", "accent2")],
+            "problem": [("ПРИЧИНЫ", "3", "bad"), ("ИТОГ", "?", "accent")],
+            "insight": [("ФАКТЫ", "3", "accent"), ("ВЫВОД", "1", "green")],
+            "solution": [("ШАГИ", "4", "accent"), ("ИТОГ", "1", "green")],
+            "cta": [("НАЧАТЬ", "СЕЙЧАС", "accent"), ("ШАГ", "1", "green")],
+        },
+        "ticker": "ИДЕЯ    ФАКТ    ПРИЧИНА    ВЫВОД    ДЕЙСТВИЕ",
+    },
+}
+
+
+def detect_topic(plan: dict) -> str:
+    text = " ".join(
+        f"{s.get('title', '')} {s.get('accent', '')} {s.get('text', '')}"
+        for s in plan.get("scenes", [])
+    ).lower()
+    text += " " + str(plan.get("title", "")).lower()
+    best, score = "story", 0
+    for topic, words in TOPIC_KEYWORDS.items():
+        current = sum(text.count(word) for word in words)
+        if current > score:
+            best, score = topic, current
+    return best if score >= 2 else "story"
+
+
 
 def _rgb(value, fallback):
     try:
@@ -473,7 +703,12 @@ def build_sprite_sheet(character: dict, path: Path, limbs: bool = True) -> Path:
     return path
 
 
-def _default_visual(kind: str) -> str:
+def _default_visual(kind: str, profile: dict | None = None) -> str:
+    if profile:
+        mapped = profile.get("visual_by_kind", {}).get(kind)
+        if mapped:
+            return mapped
+        return profile.get("visual", "room")
     return {
         "hook": "room", "cta": "room", "statement": "room",
         "checklist": "board", "compare": "board", "timeline": "board",
@@ -516,6 +751,8 @@ class PixelRenderer:
     def __init__(self, plan: dict, settings: dict, workdir: Path):
         self.plan = plan
         self.settings = settings
+        self.topic = detect_topic(plan)
+        self.profile = TOPIC_PROFILES.get(self.topic, TOPIC_PROFILES["story"])
         self.workdir = workdir
         gfx.set_theme(settings.get("style", "tech_blue"))
         self.character = character_settings(settings.get("character"))
@@ -855,32 +1092,238 @@ class PixelRenderer:
             _rect(c, bx, base_y - h, 2, h,
                   (tuple(gfx.ACCENT) if i % 2 else tuple(gfx.HIGHLIGHT)), 135)
 
+    def _draw_topic_props(self, c, t, kind):
+        prop = self.profile.get("prop")
+        accent = tuple(gfx.ACCENT)
+        accent2 = tuple(gfx.ACCENT2)
+        highlight = tuple(gfx.HIGHLIGHT)
+        good = tuple(gfx.GREEN)
+        bad = tuple(gfx.BAD)
+        muted = tuple(gfx.MUTED)
+        if prop == "fitness":
+            _rect(c, 10, 224, 34, 4, (12, 16, 20), 220)
+            _rect(c, 6, 216, 8, 20, (30, 38, 46), 230)
+            _rect(c, 40, 216, 8, 20, (30, 38, 46), 230)
+            _rect(c, 7, 218, 3, 16, accent, 160)
+            _rect(c, 41, 218, 3, 16, accent, 160)
+            _rect(c, 232, 218, 10, 28, (40, 120, 180), 200)
+            _rect(c, 234, 212, 6, 7, (20, 30, 40), 220)
+            _rect(c, 234, 224, 6, 8, (120, 220, 255), 100)
+            _rect(c, 196, 80, 58, 40, (6, 10, 16), 200)
+            _rect(c, 198, 82, 54, 2, bad, 180)
+            for i in range(9):
+                _rect(c, 202 + i * 5, 100 - (10 if i % 4 == 1 else 0), 3, 2, bad, 160)
+            _rect(c, 70, 326, 70, 4, (20, 60, 70), 150)
+        elif prop == "cooking":
+            _rect(c, 8, 236, 95, 16, (54, 38, 30), 230)
+            _rect(c, 8, 236, 95, 3, (90, 66, 50), 220)
+            _rect(c, 24, 218, 28, 18, (40, 44, 50), 240)
+            _rect(c, 22, 215, 32, 4, (70, 76, 86), 240)
+            _rect(c, 34, 212, 8, 3, (20, 22, 26), 200)
+            for i in range(3):
+                sy = 204 - int((t * 14 + i * 7) % 16)
+                _rect(c, 29 + i * 7, sy, 3, 4, (230, 230, 240), 60)
+            _rect(c, 150, 234, 60, 12, (120, 86, 58), 230)
+            _rect(c, 158, 228, 10, 8, (210, 70, 60), 230)
+            _rect(c, 172, 227, 8, 9, (90, 180, 70), 230)
+            _rect(c, 184, 229, 9, 7, (240, 180, 60), 230)
+            _rect(c, 204, 80, 50, 36, (6, 10, 16), 200)
+            _rect(c, 206, 82, 46, 2, accent, 180)
+            _rect(c, 212, 94, 38, 3, accent2, 160)
+        elif prop == "realestate":
+            _rect(c, 14, 200, 62, 54, (18, 30, 40), 220)
+            for i in range(6):
+                _rect(c, 14 + i * 10, 200 - i * 4, 62 - i * 20, 8, (28, 50, 60), 210)
+            _rect(c, 24, 224, 10, 12, highlight, 120)
+            _rect(c, 44, 224, 10, 12, highlight, 120)
+            _rect(c, 34, 242, 10, 12, accent, 150)
+            _rect(c, 70, 232, 14, 5, (240, 200, 90), 220)
+            _rect(c, 74, 236, 6, 18, (90, 70, 50), 200)
+            _rect(c, 226, 230, 16, 4, (200, 180, 90), 220)
+            _rect(c, 238, 226, 6, 6, (200, 180, 90), 220)
+            _rect(c, 242, 228, 3, 3, (6, 10, 16), 220)
+        elif prop == "education":
+            for i, col in enumerate(((200, 70, 70), (70, 140, 220), (220, 190, 80))):
+                _rect(c, 12, 236 - i * 6, 34 - i * 3, 6, col, 230)
+            _rect(c, 16, 216, 4, 20, (180, 180, 190), 220)
+            _rect(c, 16, 214, 4, 3, (240, 160, 120), 240)
+            _rect(c, 210, 100, 30, 6, (20, 24, 30), 230)
+            _rect(c, 218, 94, 14, 6, (30, 36, 44), 230)
+            _rect(c, 224, 106, 2, 10, (240, 200, 90), 220)
+            for i in range(4):
+                _rect(c, 200, 124 + i * 8, 40 - i * 5, 2, (140, 220, 170), 100)
+        elif prop == "tech":
+            _rect(c, 10, 96, 46, 86, (14, 20, 28), 230)
+            for i in range(3):
+                y = 102 + i * 26
+                _rect(c, 14, y, 38, 20, (24, 34, 46), 240)
+                _rect(c, 17, y + 5, 5, 4, good if int(t * 3 + i) % 2 else accent, 220)
+                _rect(c, 26, y + 5, 5, 4, accent2, 180)
+                _rect(c, 35, y + 5, 5, 4, bad if int(t * 2 + i) % 3 else muted, 180)
+                for j in range(3):
+                    _rect(c, 17 + j * 10, y + 13, 8, 2, (80, 100, 120), 120)
+            for i in range(5):
+                _rect(c, 196, 110 + i * 10, 50 - i * 6, 2, accent2, 60)
+                _pixel(c, 250 - i * 6, 110 + i * 10, highlight, 120)
+        elif prop == "health":
+            for dx, dy in ((4, 4), (7, 7), (10, 4), (13, 7), (10, 13), (7, 13)):
+                _rect(c, 20 + dx * 2, 170 + dy * 2, 8, 8, bad, 180)
+            _rect(c, 196, 84, 58, 40, (6, 10, 16), 200)
+            for i in range(10):
+                y = 104 - (10 if i % 4 == 1 else 0)
+                _rect(c, 200 + i * 5, y, 4, 2, good, 180)
+            _rect(c, 220, 230, 14, 6, (240, 240, 250), 220)
+            _rect(c, 220, 236, 14, 6, (200, 70, 80), 220)
+        elif prop == "travel":
+            px = 200 + int(math.sin(t * 0.3) * 4)
+            _rect(c, px, 92, 30, 5, (220, 230, 240), 220)
+            _rect(c, px + 10, 86, 14, 4, (220, 230, 240), 220)
+            _rect(c, px + 12, 98, 8, 4, (220, 230, 240), 220)
+            _rect(c, px + 26, 90, 4, 10, (220, 230, 240), 220)
+            _rect(c, 14, 226, 34, 24, (180, 90, 60), 230)
+            _rect(c, 22, 220, 18, 6, (120, 60, 40), 220)
+            _rect(c, 18, 232, 4, 12, (240, 200, 90), 200)
+            _rect(c, 70, 154, 8, 12, bad, 220)
+            _rect(c, 68, 146, 12, 12, bad, 220)
+            _rect(c, 72, 150, 4, 4, (240, 240, 250), 230)
+        elif prop == "business":
+            _rect(c, 10, 244, 96, 14, (44, 34, 28), 230)
+            _rect(c, 18, 210, 54, 34, (12, 16, 22), 230)
+            _rect(c, 22, 214, 46, 26, (20, 40, 60), 230)
+            for i in range(4):
+                _rect(c, 26 + i * 10, 234 - i * 5, 7, 4 + i * 4, accent, 200)
+            _rect(c, 80, 234, 8, 10, (200, 180, 150), 220)
+            _rect(c, 120, 244, 24, 8, (220, 220, 210), 200)
+
+    def _draw_chart_panel(self, c, t, chart, accent, accent2, highlight, good, bad, bg, card, muted):
+        _rect(c, 52, 70, 168, 172, gfx.blend(card, (0, 0, 0), 0.06))
+        _rect(c, 58, 76, 156, 160, gfx.blend(bg, accent, 0.12))
+        _rect(c, 52, 70, 168, 2, accent, 170)
+        _rect(c, 52, 70, 2, 172, accent, 70)
+        for i in range(5):
+            _rect(c, 60, 88 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
+        if chart == "progress":
+            for i in range(5):
+                y = 92 + i * 26
+                w = 24 + 104 * (0.30 + 0.12 * i) + int(5 * math.sin(t * 1.4 + i))
+                _rect(c, 64, y, 132, 10, gfx.blend(bg, muted, 0.35), 210)
+                _rect(c, 64, y, min(132, int(w)), 10, accent if i % 2 else accent2, 225)
+                _rect(c, 64, y, min(132, int(w)), 2, highlight, 200)
+                _rect(c, 200, y + 2, 8, 6, good if i > 2 else muted, 180)
+            _rect(c, 64, 226, 90, 2, muted, 120)
+        elif chart == "timer":
+            cx, cy, r = 136, 144, 50
+            progress = 0.55 + 0.25 * math.sin(t * 0.25)
+            for a in range(0, 360, 6):
+                rad = math.radians(a)
+                x = cx + math.cos(rad) * r
+                y = cy + math.sin(rad) * r
+                on = a / 360.0 <= progress
+                _rect(c, x - 2, y - 2, 4, 4,
+                      accent if on else gfx.blend(muted, bg, 0.55), 220 if on else 80)
+            _rect(c, cx - 16, cy - 4, 32, 8, gfx.blend(card, accent, 0.2), 220)
+            _rect(c, cx - 12, cy - 1, 24, 2, highlight, 200)
+            for i in range(3):
+                sy = 84 - int((t * 12 + i * 9) % 20)
+                _rect(c, cx - 10 + i * 8, sy, 3, 3,
+                      gfx.blend(highlight, bg, 0.4), 90)
+        elif chart == "ecg":
+            pts = []
+            for i in range(56):
+                x = 64 + i * 2.6
+                base = 150
+                u = (i * 0.35 + t * 2.2) % 6.0
+                y = base
+                if 2.5 < u < 2.8:
+                    y = base - 44
+                elif 2.8 <= u < 3.05:
+                    y = base + 22
+                elif 3.05 <= u < 3.3:
+                    y = base - 14
+                pts.append((x, y))
+            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, good, 190)
+            _rect(c, 64, 220, 144, 1, muted, 80)
+        elif chart == "funnel":
+            for i, w in enumerate((150, 120, 90, 60)):
+                y = 88 + i * 34
+                _rect(c, 136 - w // 2, y, w, 26, accent if i < 2 else accent2, 210)
+                _rect(c, 136 - w // 2, y, w, 3, highlight, 180)
+                _rect(c, 136 - w // 2 + 4, y + 6, max(8, w - 30), 2, bg, 90)
+        elif chart == "line":
+            pts = []
+            for i in range(14):
+                x = 64 + i * 10
+                y = 190 - i * 6 - (i * 13) % 28 + int(math.sin(t * 0.7 + i) * 4)
+                pts.append((x, y))
+            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 180)
+            for x, y in pts[::3]:
+                _rect(c, x - 1, y - 1, 3, 3, highlight, 200)
+            for x in range(62, 210, 8):
+                _rect(c, x, 120, 4, 1, highlight, 70)
+        elif chart == "bars":
+            for i in range(10):
+                x = 64 + i * 13
+                h = 18 + (i * 17) % 60
+                _rect(c, x, 220 - h, 9, h, accent if i % 2 else accent2, 210)
+                _rect(c, x, 220 - h, 9, 2, highlight, 180)
+        else:
+            closes = []
+            for i in range(12):
+                x = 64 + i * 12
+                wobble = math.sin(t * 0.55 + i * 0.7) * 3
+                base_y = 198 - i * 7 - (i * 13) % 24
+                oy = base_y + wobble
+                cy = oy - (8 + (i * 11) % 16)
+                hi = min(oy, cy) - 5 - (i * 7) % 10
+                lo = max(oy, cy) + 4 + (i * 5) % 8
+                color = good if cy < oy else bad
+                _rect(c, x + 3, hi, 1, max(2, lo - hi), color, 190)
+                _rect(c, x, min(oy, cy), 7, max(3, abs(oy - cy)), color, 230)
+                if i == 11:
+                    _rect(c, x - 2, hi - 2, 11, max(4, lo - hi) + 4, highlight, 35)
+                closes.append((x + 3, cy))
+            for (x1, y1), (x2, y2) in zip(closes, closes[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 150)
+            for x in range(62, 210, 8):
+                _rect(c, x, 108, 4, 1, highlight, 80)
+            _rect(c, 198, 105, 12, 6, highlight, 120)
+            for i in range(12):
+                x = 64 + i * 12
+                h = 4 + (i * 7) % 12
+                _rect(c, x, 232 - h, 7, h, accent if i % 3 else accent2, 60)
+            sx = 60 + int((t * 26) % 150)
+            _rect(c, sx, 78, 1, 156, highlight, 18)
+            _lx, ly = closes[-1]
+            _rect(c, 196, ly - 3, 14, 6, good, 180)
+            _rect(c, 197, ly - 2, 5, 1, (10, 14, 10), 180)
+
     def _draw_cards(self, c, scene, t):
         kind = str(scene.get("kind") or "")
-        if kind in ("chart", "stat", "bars", "dashboard", "terminal"):
-            cards = [("PNL", "+$1 240", tuple(gfx.GREEN), (0.2, 0.3, 0.25, 0.5, 0.45, 0.7, 0.9)),
-                     ("РИСК", "1 : 3", tuple(gfx.ACCENT), (0.7, 0.6, 0.65, 0.4, 0.5, 0.35, 0.3))]
-        elif kind in ("checklist", "timeline", "compare"):
-            cards = [("ПЛАН", "4 ШАГА", tuple(gfx.ACCENT2), (0.2, 0.35, 0.3, 0.55, 0.7, 0.8, 0.95)),
-                     ("ГОТОВО", "2 / 4", tuple(gfx.GREEN), (0.1, 0.25, 0.4, 0.35, 0.5, 0.6, 0.7))]
-        elif kind == "cta":
-            cards = [("ЖУРНАЛ", "7 ДНЕЙ", tuple(gfx.ACCENT), (0.2, 0.3, 0.45, 0.6, 0.75, 0.85, 0.95)),
-                     ("СТАРТ", "СЕГОДНЯ", tuple(gfx.GREEN), (0.1, 0.2, 0.3, 0.4, 0.5, 0.65, 0.8))]
-        elif kind in ("problem", "error"):
-            cards = [("ОШИБКИ", "3", tuple(gfx.BAD), (0.8, 0.7, 0.75, 0.5, 0.62, 0.42, 0.3)),
-                     ("РИСК", "3 : 1", tuple(gfx.ACCENT), (0.3, 0.4, 0.35, 0.55, 0.45, 0.6, 0.7))]
-        elif kind == "hook":
-            cards = [("МИНУС", "-$420", tuple(gfx.BAD), (0.8, 0.7, 0.6, 0.45, 0.5, 0.3, 0.2)),
-                     ("ПРИЧИНА", "?", tuple(gfx.ACCENT), (0.2, 0.3, 0.25, 0.4, 0.35, 0.5, 0.6))]
-        elif kind in ("insight", "quote"):
-            cards = [("СДЕЛКИ", "12", tuple(gfx.ACCENT), (0.2, 0.4, 0.35, 0.55, 0.6, 0.78, 0.9)),
-                     ("ВИНРЕЙТ", "58%", tuple(gfx.GREEN), (0.3, 0.35, 0.5, 0.45, 0.6, 0.7, 0.8))]
-        elif kind == "solution":
-            cards = [("PNL", "+$1 240", tuple(gfx.GREEN), (0.2, 0.3, 0.4, 0.55, 0.7, 0.8, 0.95)),
-                     ("РИСК", "1 : 3", tuple(gfx.ACCENT), (0.7, 0.6, 0.55, 0.45, 0.5, 0.35, 0.3))]
-        else:
-            cards = [("СДЕЛКИ", "12", tuple(gfx.ACCENT), (0.2, 0.4, 0.35, 0.55, 0.6, 0.78, 0.9)),
-                     ("ВИНРЕЙТ", "58%", tuple(gfx.GREEN), (0.3, 0.35, 0.5, 0.45, 0.6, 0.7, 0.8))]
+        profile = self.profile
+        raw = (profile.get("cards_by_kind", {}).get(kind)
+               or profile.get("cards")
+               or [("ГЛАВНОЕ", "3", "accent"), ("ИТОГ", "1", "green")])
+        color_map = {
+            "accent": tuple(gfx.ACCENT), "accent2": tuple(gfx.ACCENT2),
+            "green": tuple(gfx.GREEN), "bad": tuple(gfx.BAD),
+            "highlight": tuple(gfx.HIGHLIGHT),
+        }
+        sparks = (
+            (0.2, 0.3, 0.25, 0.5, 0.45, 0.7, 0.9),
+            (0.7, 0.6, 0.65, 0.4, 0.5, 0.35, 0.3),
+        )
+        cards = []
+        for i, item in enumerate(raw[:2]):
+            label, value = item[0], item[1]
+            color = color_map.get(item[2] if len(item) > 2 else "accent",
+                                  tuple(gfx.ACCENT))
+            spark = item[3] if len(item) > 3 else sparks[i % 2]
+            if kind in ("problem", "error") and i == 0:
+                color = tuple(gfx.BAD)
+                spark = tuple(reversed(spark))
+            cards.append((label, value, color, spark))
         positions = ((30, 1086, 270, 126, -1, 0.38), (780, 1116, 270, 120, 1, 0.52))
         for (label, value, color, spark), (x, y, w, h, side, delay) in zip(cards, positions):
             k = gfx.ease_out(gfx.clamp((t - delay) / 0.5))
@@ -903,10 +1346,11 @@ class PixelRenderer:
             gfx.dot(c, pts[-1][0], pts[-1][1], 4, color, int(230 * k))
 
     def _draw_ticker(self, c, t):
+        text = str(self.profile.get("ticker") or "").strip()
+        if not text:
+            return
         y = 1632
         gfx.rrect(c, 40, y, config.W - 80, 34, 10, fill=(4, 8, 12), alpha=120)
-        text = ("BTC +2.4%    ETH -1.1%    S&P +0.6%    EUR/USD 1.08    "
-                "GOLD +0.3%    NASDAQ -0.4%")
         tw = gfx.text_w(text, "mono", 18, 1.2)
         span = tw + 90
         start = 54 - int((t * 48) % span)
@@ -1023,19 +1467,18 @@ class PixelRenderer:
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
         visual = scene.get("pixel_visual")
         if not visual or visual == "auto":
-            visual = self.settings.get("pixel_background") or _default_visual(scene.get("kind", "statement"))
+            visual = self.settings.get("pixel_background") or _default_visual(
+                scene.get("kind", "statement"), self.profile)
         if visual not in VISUALS:
-            visual = _default_visual(scene.get("kind", "statement"))
+            visual = _default_visual(scene.get("kind", "statement"), self.profile)
 
         _rect(c, 0, 0, SW, SH, bg)
         kind = str(scene.get("kind") or "")
-        tint = {
-            "hook": (64, 140, 255),
-            "problem": (255, 82, 120),
-            "insight": (40, 214, 176),
-            "solution": (190, 255, 70),
-            "cta": (255, 188, 78),
-        }.get(kind, ((64, 118, 255), (168, 76, 245), (24, 196, 178), (196, 226, 64))[int(scene_index) % 4])
+        tint = tuple(self.profile.get("tint", (64, 140, 255)))
+        if kind == "problem":
+            tint = gfx.blend(tint, (255, 82, 120), 0.55)
+        elif kind == "cta":
+            tint = gfx.blend(tint, (255, 188, 78), 0.35)
         scene_start = float(scene.get("start", 0) or 0)
         env = self._env_at(scene_start + t)
         self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
@@ -1085,42 +1528,8 @@ class PixelRenderer:
             _rect(c, 222, 294, 8, 10, good)
             _rect(c, 218, 290, 4, 7, gfx.blend(good, (255, 255, 255), 0.15))
         elif visual == "chart":
-            _rect(c, 52, 70, 168, 172, gfx.blend(card, (0, 0, 0), 0.06))
-            _rect(c, 58, 76, 156, 160, gfx.blend(bg, accent, 0.12))
-            _rect(c, 52, 70, 168, 2, accent, 170)
-            _rect(c, 52, 70, 2, 172, accent, 70)
-            for i in range(5):
-                _rect(c, 60, 88 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
-            closes = []
-            for i in range(12):
-                x = 64 + i * 12
-                wobble = math.sin(t * 0.55 + i * 0.7) * 3
-                base_y = 198 - i * 7 - (i * 13) % 24
-                oy = base_y + wobble
-                cy = oy - (8 + (i * 11) % 16)
-                hi = min(oy, cy) - 5 - (i * 7) % 10
-                lo = max(oy, cy) + 4 + (i * 5) % 8
-                color = good if cy < oy else bad
-                _rect(c, x + 3, hi, 1, max(2, lo - hi), color, 190)
-                _rect(c, x, min(oy, cy), 7, max(3, abs(oy - cy)), color, 230)
-                if i == 11:
-                    _rect(c, x - 2, hi - 2, 11, max(4, lo - hi) + 4, highlight, 35)
-                closes.append((x + 3, cy))
-            for (x1, y1), (x2, y2) in zip(closes, closes[1:]):
-                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 150)
-            ty = 108
-            for x in range(62, 210, 8):
-                _rect(c, x, ty, 4, 1, highlight, 80)
-            _rect(c, 198, ty - 3, 12, 6, highlight, 120)
-            for i in range(12):
-                x = 64 + i * 12
-                h = 4 + (i * 7) % 12
-                _rect(c, x, 232 - h, 7, h, accent if i % 3 else accent2, 60)
-            sx = 60 + int((t * 26) % 150)
-            _rect(c, sx, 78, 1, 156, highlight, 18)
-            lx, ly = closes[-1]
-            _rect(c, 196, ly - 3, 14, 6, good, 180)
-            _rect(c, 197, ly - 2, 5, 1, (10, 14, 10), 180)
+            self._draw_chart_panel(c, t, str(self.profile.get("chart", "candles")),
+                                   accent, accent2, highlight, good, bad, bg, card, muted)
         elif visual == "board":
             _rect(c, 42, 66, 178, 164, (34, 40, 42))
             _rect(c, 45, 69, 172, 158, (150, 160, 152))
@@ -1168,6 +1577,7 @@ class PixelRenderer:
         else:
             _rect(c, 0, 340, SW, 140, gfx.blend(bg, accent, 0.08))
 
+        self._draw_topic_props(c, t, kind)
         # extra reusable props: object count controls density
         try:
             object_count = max(1, min(6, int(self.settings.get("pixel_objects", 3) or 3)))
@@ -1453,13 +1863,11 @@ class PixelRenderer:
         )
         full.restore()
         # scene color script
-        tint = {
-            "hook": (64, 140, 255),
-            "problem": (255, 82, 120),
-            "insight": (40, 214, 176),
-            "solution": (190, 255, 70),
-            "cta": (255, 188, 78),
-        }.get(kind, (120, 140, 200))
+        tint = tuple(self.profile.get("tint", (120, 140, 200)))
+        if kind == "problem":
+            tint = gfx.blend(tint, (255, 82, 120), 0.55)
+        elif kind == "cta":
+            tint = gfx.blend(tint, (255, 188, 78), 0.35)
         grade = skia.Paint()
         grade.setShader(skia.GradientShader.MakeLinear(
             [skia.Point(0, 0), skia.Point(0, self.out_h)],
