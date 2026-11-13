@@ -59,6 +59,12 @@ def find_ffmpeg() -> str:
 
 FFMPEG = find_ffmpeg()
 
+# Kokoro RU is a free local neural voice. Keep it on an ASCII path: its eSpeak
+# data loader cannot read Cyrillic paths, same as Piper.
+KOKORO_DIR = Path(os.environ.get("KOKORO_DIR") or (
+    Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "TradeAutopsy" / "kokoro-ru"
+))
+
 # Piper is optional. eSpeak inside Piper cannot load its data from a path with
 # Cyrillic characters, so we copy the runtime once into an ASCII-local folder.
 LEGACY_PIPER_DIR = Path(os.environ.get("PIPER_SOURCE") or (ROOT.parent / "_work" / "piper"))
@@ -173,6 +179,27 @@ EDGE_VOICES = [
         "id": "ru-RU-SvetlanaNeural",
         "name": "Светлана",
         "desc": "Женский · спокойный",
+        "provider": "edge",
+        "gender": "female",
+    },
+    {
+        "id": "en-US-EmmaMultilingualNeural",
+        "name": "Эмма",
+        "desc": "Женский · мультиязычный · спокойный темп",
+        "provider": "edge",
+        "gender": "female",
+    },
+    {
+        "id": "en-US-AndrewMultilingualNeural",
+        "name": "Эндрю",
+        "desc": "Мужской · мультиязычный · энергичный",
+        "provider": "edge",
+        "gender": "male",
+    },
+    {
+        "id": "en-US-AvaMultilingualNeural",
+        "name": "Ава",
+        "desc": "Женский · мультиязычный · медленный темп",
         "provider": "edge",
         "gender": "female",
     },

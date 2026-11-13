@@ -3,6 +3,7 @@
 Providers
 ---------
 edge        free Microsoft Edge voices, natural Russian, word boundaries
+kokoro      free local Kokoro RU neural voices (ONNX, CPU, no key)
 piper       fully offline Piper voices from _work/piper
 elevenlabs  optional paid provider, requires the user's own API key
 
@@ -127,6 +128,22 @@ def synth_edge(text: str, voice: str, rate: int, pitch: int, key: str) -> dict:
         w["t"] = max(0.0, w["t"] - lead / config.SR)
     return {"wav": str(wav), "words": words, "dur": len(x) / config.SR,
             "provider": "edge"}
+
+
+# ---------------------------------------------------------------- kokoro
+def synth_kokoro(text: str, voice: str, rate: int, key: str) -> dict:
+    """Free local Russian neural voice (Kokoro RU, ONNX Runtime)."""
+    from . import kokoro
+
+    audio, sr = kokoro.synthesize(text, voice, rate)
+    raw = TTS_CACHE / f"{key}_24k.wav"
+    wav = TTS_CACHE / f"{key}.wav"
+    write_wav(raw, audio, sr)
+    to_wav(raw, wav)
+    x, _ = read_wav(wav)
+    dur = len(x) / config.SR
+    return {"wav": str(wav), "words": estimate_words(text, dur), "dur": dur,
+            "provider": "kokoro"}
 
 
 # ---------------------------------------------------------------- piper
@@ -266,6 +283,8 @@ def synth_once(text: str, settings: dict, force: bool = False) -> dict:
             pass
     if provider == "edge":
         info = synth_edge(text, voice, rate, pitch, key)
+    elif provider == "kokoro":
+        info = synth_kokoro(text, voice, rate, key)
     elif provider == "piper":
         info = synth_piper(text, voice, rate, key)
     elif provider == "elevenlabs":

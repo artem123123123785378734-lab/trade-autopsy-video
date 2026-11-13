@@ -59,7 +59,11 @@ def main(payload_path: str) -> None:
     # Prefer Microsoft Edge neural voices. They are free and much more natural
     # than Piper. If Microsoft is unreachable from the runner, fall back to the
     # bundled CC0 Piper voices automatically.
-    edge_allowed = {"ru-RU-DmitryNeural", "ru-RU-SvetlanaNeural"}
+    edge_allowed = {
+        "ru-RU-DmitryNeural", "ru-RU-SvetlanaNeural",
+        "en-US-EmmaMultilingualNeural", "en-US-AndrewMultilingualNeural",
+        "en-US-AvaMultilingualNeural",
+    }
     piper_allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
     provider = str(settings.get("provider") or "edge")
     if provider not in ("edge", "piper"):
@@ -69,7 +73,7 @@ def main(payload_path: str) -> None:
     if quality not in ("fast", "quality", "ultra"):
         quality = "quality"
     if provider == "edge":
-        voice = voice if voice in edge_allowed else "ru-RU-DmitryNeural"
+        voice = voice if voice in edge_allowed else "ru-RU-SvetlanaNeural"
     else:
         voice = voice if voice in piper_allowed else "ru_RU-dmitri-medium"
     settings.update(provider=provider, voice=voice, pitch=0, quality=quality, auto_rate=True)
