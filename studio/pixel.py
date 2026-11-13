@@ -119,7 +119,7 @@ COLOR_KEYS = {
 
 TOPIC_PROFILES = {
     "trading": {
-        "tint": (64, 140, 255), "chart": "candles", "prop": "trading",
+        "tint": (64, 140, 255), "chart": "candles", "prop": "trading", "set": "trading",
         "visual_by_kind": {
             "hook": "chart", "problem": "board", "insight": "room",
             "solution": "terminal", "cta": "room", "chart": "chart",
@@ -140,7 +140,7 @@ TOPIC_PROFILES = {
                    "GOLD +0.3%    NASDAQ -0.4%"),
     },
     "fitness": {
-        "tint": (255, 150, 70), "chart": "progress", "prop": "fitness",
+        "tint": (255, 150, 70), "chart": "progress", "prop": "fitness", "set": "gym",
         "visual_by_kind": {
             "hook": "room", "problem": "chart", "insight": "chart",
             "solution": "chart", "cta": "room", "chart": "chart",
@@ -157,7 +157,7 @@ TOPIC_PROFILES = {
         "ticker": "ШАГИ 8 240    ПУЛЬС 128    КАЛОРИИ 420    СОН 7.5 Ч",
     },
     "cooking": {
-        "tint": (255, 182, 92), "chart": "timer", "prop": "cooking",
+        "tint": (255, 182, 92), "chart": "timer", "prop": "cooking", "set": "kitchen",
         "visual_by_kind": {
             "hook": "room", "problem": "chart", "insight": "chart",
             "solution": "chart", "cta": "room",
@@ -172,7 +172,7 @@ TOPIC_PROFILES = {
         "ticker": "БЕЛКИ 30    ЖИРЫ 12    УГЛЕВОДЫ 45    ККАЛ 420",
     },
     "realestate": {
-        "tint": (60, 200, 160), "chart": "line", "prop": "realestate",
+        "tint": (60, 200, 160), "chart": "line", "prop": "realestate", "set": "apartment",
         "visual_by_kind": {
             "hook": "room", "problem": "chart", "insight": "chart",
             "solution": "chart", "cta": "room",
@@ -187,7 +187,7 @@ TOPIC_PROFILES = {
         "ticker": "СТАВКА 6.2%    ЦЕНА $240K    АРЕНДА $1 200    ДОХОД 8%",
     },
     "education": {
-        "tint": (255, 206, 92), "chart": "progress", "prop": "education",
+        "tint": (255, 206, 92), "chart": "progress", "prop": "education", "set": "classroom",
         "visual_by_kind": {
             "hook": "board", "problem": "board", "insight": "chart",
             "solution": "board", "cta": "room",
@@ -202,7 +202,7 @@ TOPIC_PROFILES = {
         "ticker": "УРОК 3    ЗАДАЧИ 12    ЭКЗАМЕН 85%    СЕРИЯ 7 ДНЕЙ",
     },
     "tech": {
-        "tint": (150, 110, 255), "chart": "line", "prop": "tech",
+        "tint": (150, 110, 255), "chart": "line", "prop": "tech", "set": "server",
         "visual_by_kind": {
             "hook": "terminal", "problem": "chart", "insight": "terminal",
             "solution": "chart", "cta": "room",
@@ -218,7 +218,7 @@ TOPIC_PROFILES = {
         "ticker": "API 120MS    CPU 42%    RAM 68%    UPTIME 99.9%",
     },
     "health": {
-        "tint": (40, 214, 176), "chart": "ecg", "prop": "health",
+        "tint": (40, 214, 176), "chart": "ecg", "prop": "health", "set": "clinic",
         "visual_by_kind": {
             "hook": "room", "problem": "chart", "insight": "chart",
             "solution": "chart", "cta": "room",
@@ -233,7 +233,7 @@ TOPIC_PROFILES = {
         "ticker": "ПУЛЬС 72    ДАВЛЕНИЕ 120/80    ШАГИ 8 240    СОН 7.5 Ч",
     },
     "travel": {
-        "tint": (255, 170, 90), "chart": "line", "prop": "travel",
+        "tint": (255, 170, 90), "chart": "line", "prop": "travel", "set": "airport",
         "visual_by_kind": {
             "hook": "room", "problem": "chart", "insight": "chart",
             "solution": "chart", "cta": "room",
@@ -248,7 +248,7 @@ TOPIC_PROFILES = {
         "ticker": "РЕЙС SU 204    ОТЕЛЬ 4*    ВИЗА OK    БЮДЖЕТ $1 200",
     },
     "business": {
-        "tint": (80, 140, 255), "chart": "funnel", "prop": "business",
+        "tint": (80, 140, 255), "chart": "funnel", "prop": "business", "set": "office",
         "visual_by_kind": {
             "hook": "board", "problem": "chart", "insight": "board",
             "solution": "chart", "cta": "room",
@@ -264,7 +264,7 @@ TOPIC_PROFILES = {
         "ticker": "ЛИДЫ 120    СДЕЛКИ 24    КОНВЕРСИЯ 18%    ВЫРУЧКА $8K",
     },
     "story": {
-        "tint": (120, 150, 220), "chart": "bars", "prop": "story",
+        "tint": (120, 150, 220), "chart": "bars", "prop": "story", "set": "studio",
         "visual_by_kind": {
             "hook": "room", "problem": "board", "insight": "chart",
             "solution": "room", "cta": "room",
@@ -1092,6 +1092,215 @@ class PixelRenderer:
             _rect(c, bx, base_y - h, 2, h,
                   (tuple(gfx.ACCENT) if i % 2 else tuple(gfx.HIGHLIGHT)), 135)
 
+    def _draw_set(self, c, t, scene_index, set_id, tint, accent, accent2, highlight, good, bad, bg, card, muted):
+        for i in range(15):
+            u = i / 14.0
+            shade = gfx.blend(gfx.blend(bg, tint, 0.05 + 0.10 * u), (0, 0, 0), 0.18 * (1 - u))
+            _rect(c, 0, i * 16, SW, 18, shade)
+        _rect(c, 0, 340, SW, 140, gfx.blend(gfx.blend(bg, tint, 0.08), (0, 0, 0), 0.28))
+        _rect(c, 0, 338, SW, 3, accent)
+        for i in range(9):
+            _rect(c, 0, 348 + i * 15, SW, 1, gfx.blend(tint, (0, 0, 0), 0.4), 22)
+        for x in (18, 112, 206):
+            _rect(c, x, 9, 46, 3, highlight, 45)
+            gfx.orb(c, x + 23, 12, 34, tint, 16, 2)
+
+        if set_id == "gym":
+            for x in (6, 212):
+                _rect(c, x, 82, 50, 176, (10, 16, 22), 240)
+                _rect(c, x + 2, 84, 46, 172, gfx.blend(bg, tint, 0.18), 220)
+                _rect(c, x + 4, 86, 2, 168, highlight, 25)
+                _rect(c, x + 2, 84, 46, 2, accent, 60)
+                _rect(c, x + 18, 160, 10, 40, gfx.blend(accent, bg, 0.4), 35)
+                _rect(c, x + 14, 200, 18, 3, highlight, 20)
+            _rect(c, 12, 120, 4, 200, (30, 38, 46), 240)
+            _rect(c, 42, 120, 4, 200, (30, 38, 46), 240)
+            _rect(c, 10, 118, 38, 4, (50, 60, 70), 240)
+            _rect(c, 8, 160, 42, 3, (170, 180, 190), 220)
+            _rect(c, 4, 150, 6, 22, bad, 200)
+            _rect(c, 48, 150, 6, 22, bad, 200)
+            _rect(c, 10, 300, 40, 6, (20, 26, 32), 230)
+            _rect(c, 16, 306, 4, 16, (40, 46, 56), 230)
+            _rect(c, 40, 306, 4, 16, (40, 46, 56), 230)
+            _rect(c, 206, 268, 58, 8, (20, 26, 32), 230)
+            _rect(c, 210, 300, 50, 4, (50, 60, 70), 230)
+            _rect(c, 214, 220, 34, 40, (20, 26, 32), 230)
+            _rect(c, 218, 226, 26, 18, gfx.blend(bg, accent, 0.3), 230)
+            _rect(c, 220, 230, 18, 2, highlight, 160)
+            for i in range(3):
+                _rect(c, 10 + i * 14, 318 - i * 4, 10, 4, (60, 60, 70), 230)
+                _rect(c, 8 + i * 14, 314 - i * 4, 4, 10, accent, 160)
+                _rect(c, 18 + i * 14, 314 - i * 4, 4, 10, accent, 160)
+            _rect(c, 196, 56, 52, 3, accent2, 200)
+            _rect(c, 200, 62, 44, 2, accent2, 120)
+        elif set_id == "kitchen":
+            for x in range(0, SW, 14):
+                _rect(c, x, 40, 1, 300, (220, 210, 190), 12)
+            for y in range(44, 340, 14):
+                _rect(c, 0, y, SW, 1, (220, 210, 190), 10)
+            for x in (6, 192):
+                _rect(c, x, 62, 72, 62, (54, 40, 30), 240)
+                _rect(c, x + 3, 65, 66, 56, (76, 56, 40), 240)
+                _rect(c, x + 8, 108, 18, 3, (200, 180, 120), 200)
+                _rect(c, x + 50, 108, 18, 3, (200, 180, 120), 200)
+            _rect(c, 94, 76, 82, 92, (30, 26, 24), 240)
+            _rect(c, 98, 80, 74, 84, gfx.blend(bg, tint, 0.25), 230)
+            _rect(c, 134, 80, 2, 84, (30, 26, 24), 220)
+            _rect(c, 98, 120, 74, 2, (30, 26, 24), 220)
+            for i in range(7):
+                _pixel(c, 104 + (i * 13) % 66, 88 + (i * 17) % 64, highlight, 80)
+            _rect(c, 104, 54, 62, 6, (60, 60, 66), 240)
+            _rect(c, 110, 60, 50, 12, (40, 44, 50), 220)
+            _rect(c, 0, 300, SW, 10, (120, 86, 58), 240)
+            _rect(c, 0, 310, SW, 30, (54, 40, 30), 240)
+            for i in range(6):
+                _rect(c, 8 + i * 44, 316, 32, 18, (72, 54, 40), 220)
+                _rect(c, 20 + i * 44, 322, 8, 2, (200, 180, 120), 160)
+            _rect(c, 66, 284, 54, 16, (40, 44, 50), 240)
+            _rect(c, 72, 268, 26, 16, (60, 66, 76), 240)
+            _rect(c, 70, 264, 30, 4, (90, 96, 106), 240)
+            for i in range(3):
+                sy = 256 - int((t * 14 + i * 7) % 14)
+                _rect(c, 76 + i * 7, sy, 3, 4, (235, 235, 245), 55)
+            _rect(c, 170, 288, 50, 10, (140, 100, 66), 230)
+            _rect(c, 176, 282, 9, 7, (210, 70, 60), 230)
+            _rect(c, 188, 281, 7, 8, (90, 180, 70), 230)
+            _rect(c, 198, 283, 8, 6, (240, 180, 60), 230)
+            for x in (80, 190):
+                _rect(c, x, 30, 2, 18, (40, 40, 46), 220)
+                _rect(c, x - 7, 48, 16, 4, (240, 200, 120), 220)
+                gfx.orb(c, x, 52, 22, (255, 200, 120), 18, 2)
+        elif set_id == "apartment":
+            _rect(c, 62, 54, 146, 164, (16, 22, 30), 240)
+            _rect(c, 66, 58, 138, 156, gfx.blend(bg, tint, 0.28), 230)
+            _rect(c, 134, 58, 2, 156, (16, 22, 30), 220)
+            _rect(c, 66, 130, 138, 2, (16, 22, 30), 220)
+            for i in range(7):
+                x = 70 + i * 19
+                h = 18 + (i * 13) % 34
+                y = 210 - h
+                _rect(c, x, y, 16, h, gfx.blend(bg, accent, 0.25), 210)
+                for wy in range(y + 6, 206, 10):
+                    _rect(c, x + 3, wy, 3, 2, highlight, 60)
+            _pixel(c, 186, 74, (230, 230, 220), 160)
+            _rect(c, 50, 50, 14, 180, (40, 30, 34), 220)
+            _rect(c, 206, 50, 14, 180, (40, 30, 34), 220)
+            _rect(c, 4, 258, 62, 34, (40, 50, 60), 230)
+            _rect(c, 8, 250, 54, 14, (50, 64, 76), 230)
+            _rect(c, 12, 266, 20, 10, (70, 90, 100), 180)
+            _rect(c, 36, 266, 20, 10, (70, 90, 100), 180)
+            _rect(c, 224, 292, 14, 22, (60, 44, 34), 230)
+            _rect(c, 226, 276, 10, 18, good, 200)
+            _rect(c, 222, 270, 4, 8, gfx.blend(good, (255, 255, 255), 0.2), 180)
+            _rect(c, 20, 80, 28, 20, (30, 40, 48), 230)
+            _rect(c, 24, 84, 20, 12, accent2, 80)
+        elif set_id == "classroom":
+            _rect(c, 46, 64, 178, 150, (34, 40, 34), 240)
+            _rect(c, 50, 68, 170, 142, (28, 54, 42), 240)
+            for i in range(5):
+                _rect(c, 60, 84 + i * 22, 60 + (i * 17) % 60, 2, (160, 210, 170), 80)
+            _rect(c, 180, 150, 26, 2, (200, 220, 200), 60)
+            _rect(c, 74, 180, 20, 2, (200, 220, 200), 60)
+            _rect(c, 6, 286, 64, 10, (90, 66, 44), 240)
+            _rect(c, 10, 296, 6, 30, (60, 44, 30), 240)
+            _rect(c, 58, 296, 6, 30, (60, 44, 30), 240)
+            _rect(c, 16, 270, 30, 16, (200, 200, 190), 210)
+            _rect(c, 210, 160, 54, 170, (60, 44, 30), 240)
+            for i in range(5):
+                _rect(c, 214, 170 + i * 30, 46, 3, (90, 66, 44), 220)
+                for j in range(5):
+                    _rect(c, 216 + j * 9, 158 + i * 30, 6, 12,
+                          (180, 60, 60) if (i + j) % 3 == 0 else
+                          (60, 120, 180) if (i + j) % 3 == 1 else (220, 190, 80), 200)
+            _rect(c, 226, 300, 16, 12, (60, 100, 160), 220)
+            _rect(c, 230, 312, 8, 6, (180, 160, 120), 220)
+        elif set_id == "server":
+            for x in (6, 218):
+                _rect(c, x, 80, 46, 260, (12, 16, 22), 240)
+                for i in range(7):
+                    y = 86 + i * 34
+                    _rect(c, x + 3, y, 40, 28, (22, 28, 38), 240)
+                    _rect(c, x + 7, y + 5, 4, 4,
+                          good if (i + int(t * 4)) % 2 else accent, 220)
+                    _rect(c, x + 14, y + 5, 4, 4, accent2, 180)
+                    for j in range(4):
+                        _rect(c, x + 7 + j * 8, y + 16, 6, 2, (80, 100, 120), 120)
+            for i in range(3):
+                _rect(c, 58 + i * 4, 60 + i * 6, 150 - i * 8, 2, accent2, 50)
+            _rect(c, 196, 90, 60, 40, (10, 14, 20), 230)
+            _rect(c, 200, 94, 52, 32, (16, 40, 60), 230)
+            for i in range(5):
+                _rect(c, 204, 100 + i * 5, 30 - i * 3, 2, good, 100)
+        elif set_id == "clinic":
+            _rect(c, 92, 66, 86, 86, (20, 30, 34), 240)
+            _rect(c, 96, 70, 78, 78, gfx.blend(bg, tint, 0.25), 230)
+            for i in range(7):
+                _rect(c, 96, 72 + i * 11, 78, 2, (200, 220, 220), 40)
+            _rect(c, 8, 96, 58, 46, (10, 16, 20), 240)
+            _rect(c, 12, 100, 50, 38, (12, 40, 40), 230)
+            for i in range(9):
+                _rect(c, 16 + i * 5, 120 - (10 if i % 4 == 1 else 0), 4, 2, good, 180)
+            _rect(c, 212, 160, 52, 170, (200, 210, 210), 230)
+            for i in range(4):
+                _rect(c, 216, 170 + i * 38, 44, 2, (140, 160, 160), 200)
+                _rect(c, 230, 174 + i * 38, 16, 3, (120, 140, 140), 160)
+            _rect(c, 222, 230, 12, 5, (240, 240, 250), 220)
+            _rect(c, 222, 235, 12, 5, bad, 220)
+        elif set_id == "airport":
+            _rect(c, 56, 48, 158, 154, (20, 24, 34), 240)
+            for i in range(10):
+                u = i / 9.0
+                _rect(c, 60, 52 + i * 14, 150, 16,
+                      gfx.blend((255, 140, 80), (40, 40, 80), u), 200)
+            _pixel(c, 190, 70, (255, 230, 180), 180)
+            _rect(c, 100, 120, 50, 5, (20, 20, 26), 220)
+            _rect(c, 118, 112, 18, 4, (20, 20, 26), 220)
+            _rect(c, 122, 126, 12, 4, (20, 20, 26), 220)
+            _rect(c, 6, 70, 44, 90, (10, 14, 20), 240)
+            for i in range(6):
+                _rect(c, 10, 80 + i * 13, 36, 2, accent if i % 2 else muted, 120)
+            for i in range(3):
+                _rect(c, 6 + i * 20, 280, 16, 10, (40, 50, 60), 230)
+                _rect(c, 8 + i * 20, 270, 12, 12, (50, 64, 76), 230)
+            _rect(c, 220, 286, 28, 22, (180, 90, 60), 230)
+            _rect(c, 228, 280, 12, 6, (120, 60, 40), 220)
+        elif set_id == "office":
+            _rect(c, 68, 54, 142, 176, (14, 22, 30), 240)
+            _rect(c, 72, 58, 134, 168, gfx.blend(bg, tint, 0.20), 220)
+            for x in (104, 140, 176):
+                _rect(c, x, 58, 1, 168, (200, 220, 240), 20)
+            for i in range(6):
+                x = 76 + i * 22
+                h = 20 + (i * 17) % 40
+                y = 220 - h
+                _rect(c, x, y, 18, h, gfx.blend(bg, accent, 0.2), 200)
+            _rect(c, 6, 80, 54, 74, (200, 210, 210), 230)
+            for i in range(4):
+                _rect(c, 12, 94 + i * 13, 40 - i * 5, 2, (60, 80, 90), 140)
+            _rect(c, 6, 280, 84, 10, (50, 40, 34), 240)
+            _rect(c, 10, 290, 6, 34, (30, 24, 20), 240)
+            _rect(c, 72, 290, 6, 34, (30, 24, 20), 240)
+            _rect(c, 16, 250, 40, 28, (12, 16, 22), 230)
+            _rect(c, 20, 254, 32, 20, (18, 36, 54), 230)
+            _rect(c, 80, 268, 8, 12, (200, 180, 150), 220)
+            _rect(c, 228, 292, 14, 24, (60, 44, 34), 230)
+            _rect(c, 230, 274, 10, 20, good, 200)
+        elif set_id == "trading":
+            for x, w in ((24, 92), (124, 118)):
+                _rect(c, x, 60, w, 92, (10, 14, 22), 240)
+                _rect(c, x + 3, 63, w - 6, 86, gfx.blend(bg, accent, 0.16), 230)
+                for j in range(8):
+                    _rect(c, x + 8 + j * 10, 120 - (j * 7) % 44, 5,
+                          3 + (j * 5) % 18, good if j % 2 else bad, 140)
+            _rect(c, 0, 300, SW, 12, (28, 30, 40), 240)
+            _rect(c, 0, 312, SW, 26, (18, 20, 28), 240)
+            _rect(c, 6, 220, 18, 80, (20, 24, 32), 230)
+            for i in range(4):
+                _rect(c, 9, 228 + i * 17, 12, 10, (30, 38, 50), 230)
+                _pixel(c, 12, 232 + i * 17, good, 200)
+            _rect(c, 214, 292, 24, 8, (220, 220, 210), 200)
+            _rect(c, 220, 286, 16, 8, (200, 200, 190), 180)
+
     def _draw_topic_props(self, c, t, kind):
         prop = self.profile.get("prop")
         accent = tuple(gfx.ACCENT)
@@ -1481,19 +1690,24 @@ class PixelRenderer:
             tint = gfx.blend(tint, (255, 188, 78), 0.35)
         scene_start = float(scene.get("start", 0) or 0)
         env = self._env_at(scene_start + t)
-        self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
-        self._draw_beams(c, t, accent2, highlight)
-        self._draw_city(c, t, scene_index, tint, accent, accent2, highlight, bg)
-        # dotted tech grid, slowly scrolling
-        gx_off = int(t * 2) % 12
-        for gx in range(6 - gx_off, SW, 12):
-            for gy in range(64, 252, 12):
-                _pixel(c, gx, gy, tint if (gx + gy) % 3 else highlight, 18)
-        _rect(c, 0, 200, SW, 2, gfx.blend(bg, tint, 0.55), 90)
-        _rect(c, 0, 340, SW, 140, gfx.blend(gfx.blend(bg, tint, 0.08), (0, 0, 0), 0.25))
-        _rect(c, 0, 338, SW, 3, accent)
-        self._draw_floor(c, t, scene_index, tint, accent, accent2, highlight)
-        self._draw_backdrop(c, t, scene_index)
+        set_id = str(self.profile.get("set") or "studio")
+        if set_id == "studio":
+            self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
+            self._draw_beams(c, t, accent2, highlight)
+            self._draw_city(c, t, scene_index, tint, accent, accent2, highlight, bg)
+            # dotted tech grid, slowly scrolling
+            gx_off = int(t * 2) % 12
+            for gx in range(6 - gx_off, SW, 12):
+                for gy in range(64, 252, 12):
+                    _pixel(c, gx, gy, tint if (gx + gy) % 3 else highlight, 18)
+            _rect(c, 0, 200, SW, 2, gfx.blend(bg, tint, 0.55), 90)
+            _rect(c, 0, 340, SW, 140, gfx.blend(gfx.blend(bg, tint, 0.08), (0, 0, 0), 0.25))
+            _rect(c, 0, 338, SW, 3, accent)
+            self._draw_floor(c, t, scene_index, tint, accent, accent2, highlight)
+            self._draw_backdrop(c, t, scene_index)
+        else:
+            self._draw_set(c, t, scene_index, set_id, tint, accent, accent2,
+                           highlight, good, bad, bg, card, muted)
         # cinematic scanlines
         for sy in range(0, SH, 4):
             _rect(c, 0, sy, SW, 1, (0, 0, 0), 8)
@@ -1577,7 +1791,8 @@ class PixelRenderer:
         else:
             _rect(c, 0, 340, SW, 140, gfx.blend(bg, accent, 0.08))
 
-        self._draw_topic_props(c, t, kind)
+        if set_id == "studio":
+            self._draw_topic_props(c, t, kind)
         # extra reusable props: object count controls density
         try:
             object_count = max(1, min(6, int(self.settings.get("pixel_objects", 3) or 3)))
