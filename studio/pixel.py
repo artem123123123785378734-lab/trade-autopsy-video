@@ -1550,14 +1550,15 @@ class PixelRenderer:
             gfx.rrect(c, xx, y, 4, h, 0, fill=color, alpha=int(220 * k))
             gfx.draw_text(c, label, xx + 20, y + 34, "mono", 17, gfx.MUTED,
                           int(210 * k), tracking=1.5)
-            gfx.draw_text(c, value, xx + 20, y + 82, "black", 40, color,
+            gfx.draw_text(c, _count_value(value, k), xx + 20, y + 82, "black", 40, color,
                           int(250 * k), tracking=-0.6)
             pts = []
             for i, v in enumerate(spark):
                 pts.append((xx + 24 + i * 36, y + h - 18 - v * 54))
-            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+            visible = max(2, int(round(len(pts) * k)))
+            for (x1, y1), (x2, y2) in zip(pts[:visible], pts[1:visible]):
                 gfx.line(c, x1, y1, x2, y2, color, 3, int(190 * k), cap=False)
-            gfx.dot(c, pts[-1][0], pts[-1][1], 4, color, int(230 * k))
+            gfx.dot(c, pts[visible - 1][0], pts[visible - 1][1], 4, color, int(230 * k))
 
     def _draw_ticker(self, c, t):
         text = str(self.profile.get("ticker") or "").strip()
@@ -1862,7 +1863,12 @@ class PixelRenderer:
             x = SW - char_w - 12
         else:
             x = (SW - char_w) / 2
-        if anim == "walk":
+        if anim == "walk" and position == "center":
+            walk_start = float(scene.get("start", 0) or 0)
+            walk_end = float(scene.get("end", walk_start + 1) or walk_start + 1)
+            u = gfx.ease_in_out(gfx.clamp(t / max(0.1, walk_end - walk_start)))
+            x = 18 + (SW - char_w - 36) * u
+        elif anim == "walk":
             x += math.sin(t * speed * 0.3) * 8
         elif anim in ("talk", "idle", "explain", "think") or talking:
             x += math.sin(t * speed * 0.34) * (2.0 if talking else 1.2)
@@ -1916,6 +1922,19 @@ class PixelRenderer:
             elif anim in ("error", "scared"):
                 body_dx = math.sin(t * 18.0) * 0.5 * scale
             _draw_limbs(c, x, y, scale, self.character, anim, t, env, part="legs")
+            rim = None
+            try:
+                rim = skia.Paint()
+                rim.setColorFilter(skia.ColorFilters.Blend(
+                    gfx.col(tint, 255), skia.BlendMode.kSrcIn))
+                rim.setAlphaf(0.30)
+                src_body = skia.Rect.MakeXYWH(0, 21, FRAME_W, FRAME_H - 21)
+                dst_body = skia.Rect.MakeXYWH(
+                    x + body_dx + 1.2 * scale, y + 19.8 * scale,
+                    FRAME_W * scale, (FRAME_H - 21) * scale)
+                c.drawImageRect(self.sheet, src_body, dst_body, self.nearest, rim)
+            except Exception:
+                rim = None
             breath = 1.0 + 0.006 * math.sin(t * 2.1)
             waist_x = x + body_dx + 20 * scale
             waist_y = y + 40 * scale
@@ -1959,6 +1978,12 @@ class PixelRenderer:
             c.translate(neck_x, neck_y)
             c.rotate(tilt)
             c.translate(-neck_x, -neck_y)
+            if rim is not None:
+                src_head = skia.Rect.MakeXYWH(0, 0, FRAME_W, 21)
+                dst_head = skia.Rect.MakeXYWH(
+                    x + body_dx + head_dx + 1.2 * scale, y + head_dy - 1.2 * scale,
+                    FRAME_W * scale, 21 * scale)
+                c.drawImageRect(self.sheet, src_head, dst_head, self.nearest, rim)
             _draw_sprite_part(c, self.sheet, 0, 0, FRAME_W, 21,
                               x + body_dx + head_dx, y + head_dy, self.nearest, scale)
             self._draw_face_overlay(c, x + body_dx + head_dx, y + head_dy, scale,
@@ -2024,11 +2049,20 @@ class PixelRenderer:
         y = 248
         for line in title_lines:
             yy = y + rise_title
-            gfx.draw_text(c, line, 52, yy, title_font, size, (0, 0, 0),
-                          int(150 * a_title), tracking=-1.0)
-            gfx.draw_text(c, line, 49, yy - 3, title_font, size, text_rgb,
-                          int(255 * a_title), tracking=-1.0,
-                          glow=accent_rgb, glow_a=64, glow_w=18)
+            wx = 49.0
+            words = line.split()
+            for wi, word in enumerate(words):
+                word_a = min(a_title, gfx.ease_out(
+                    gfx.clamp((t - 0.10 - wi * 0.055) / 0.30)))
+                alpha = int(255 * word_a)
+                if alpha > 0:
+                    color = accent_rgb if (wi == 0 and len(words) > 1) else text_rgb
+                    gfx.draw_text(c, word, wx + 3, yy + 3, title_font, size,
+                                  (0, 0, 0), int(alpha * 0.60), tracking=-1.0)
+                    gfx.draw_text(c, word, wx, yy - int((1 - word_a) * 10),
+                                  title_font, size, color, alpha, tracking=-1.0,
+                                  glow=accent_rgb, glow_a=64, glow_w=18)
+                wx += gfx.text_w(word + " ", title_font, size, -1.0)
             y += int(size * 1.06)
         if accent_lines:
             y += 8
@@ -2110,6 +2144,8 @@ class PixelRenderer:
         if kind in ("hook", "problem"):
             zoom += 0.025
         zoom = max(1.0, zoom)
+        # impact punch at the scene start
+        zoom *= 1.0 + 0.06 * (1.0 - gfx.ease_out(min(1.0, t / 0.38)))
         shake_x = shake_y = 0.0
         if anim in ("error", "scared"):
             shake_x = math.sin(t * 55) * 1.6
@@ -2129,7 +2165,7 @@ class PixelRenderer:
             full.rotate(angle)
             full.translate(-self.out_w / 2, -self.out_h / 2)
         full.drawImageRect(
-            self.low.makeImageSnapshot(),
+            low_img := self.low.makeImageSnapshot(),
             skia.Rect.MakeXYWH(x0, y0, src_w, src_h),
             skia.Rect.MakeWH(self.out_w, self.out_h),
             self.nearest,
@@ -2149,6 +2185,23 @@ class PixelRenderer:
             [0.0, 0.55, 1.0],
         ))
         full.drawRect(skia.Rect.MakeWH(self.out_w, self.out_h), grade)
+        if kind == "hook" and t < 0.55:
+            k = 1.0 - t / 0.55
+            for i in range(5):
+                y = self.out_h * (0.14 + i * 0.15)
+                w = 80 + (i * 47) % 140
+                x = self.out_w - int((t * 1500 + i * 110) % (self.out_w + 200))
+                _rect(full, x, y, w, 2, (255, 255, 255), int(26 * k))
+        if kind in ("problem", "error") and t < 0.35:
+            k = 1.0 - t / 0.35
+            for i in range(3):
+                sy = int((i + 1) * SH / 4)
+                sh = 6
+                dx = int(math.sin(t * 70 + i * 2) * 10 * k)
+                src = skia.Rect.MakeXYWH(0, sy, SW, sh)
+                dst = skia.Rect.MakeXYWH(dx, sy * self.out_h / SH,
+                                         self.out_w, sh * self.out_h / SH)
+                full.drawImageRect(low_img, src, dst, self.nearest, None)
         if self.vignette is not None:
             full.drawImageRect(
                 self.vignette,
@@ -2471,6 +2524,27 @@ def _draw_image_sprite(c, image, x, y, max_w: float, max_h: float, sampling):
     dst = skia.Rect.MakeXYWH(dx, dy, w, h)
     src = skia.Rect.MakeWH(image.width(), image.height())
     c.drawImageRect(image, src, dst, sampling, None)
+
+
+def _count_value(value: str, k: float) -> str:
+    """Animate numbers inside a card value from 0 to the target."""
+    if k >= 0.999:
+        return value
+    import re
+
+    def repl(match):
+        raw = match.group(0)
+        cleaned = raw.replace(" ", "").replace(",", ".")
+        try:
+            number = float(cleaned)
+        except ValueError:
+            return raw
+        current = number * k
+        if "." in cleaned:
+            return f"{current:.1f}".replace(".", ",")
+        return f"{int(round(current)):,}".replace(",", " ")
+
+    return re.sub(r"\d+(?:[ \u00a0]\d+)*(?:[.,]\d+)?", repl, value)
 
 
 def _wrap_text(text: str, style: str, size: int, max_w: float) -> list[str]:
