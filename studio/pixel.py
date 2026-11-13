@@ -127,7 +127,7 @@ def _draw_icon(c, name, x, y, color, scale=1, alpha=210):
                 _rect(c, x + col * scale, y + row * scale, scale, scale, color, alpha)
 
 
-def _draw_character(c, ox, oy, frame: int, ch: dict):
+def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
     skin = ch["skin"]
     hair = ch["hair"]
     shirt = ch["shirt"]
@@ -192,25 +192,26 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         _rect(c, ox + 35, oy + 32, 3, 6, skin)
         _rect(c, ox + 36, oy + 33, 1, 3, gfx.blend(skin, (255, 255, 255), 0.22))
 
-    if walk:
-        left = (frame - 4) in (0, 1)
-        leg_l += 2 if left else 0
-        leg_r -= 2 if left else 0
-    leg_w = 5 if slim else 6
-    _rect(c, ox + leg_l - 1, oy + 41, leg_w + 2, 14, outline)
-    _rect(c, ox + leg_r - 1, oy + 41, leg_w + 2, 14, outline)
-    _rect(c, ox + leg_l - 2, oy + 53, 9, 6, outline)
-    _rect(c, ox + leg_r - 2, oy + 53, 9, 6, outline)
-    _rect(c, ox + leg_l, oy + 42, leg_w, 12, pants)
-    _rect(c, ox + leg_r, oy + 42, leg_w, 12, pants)
-    _rect(c, ox + leg_l, oy + 44, 1, 8, pants_light)
-    _rect(c, ox + leg_r, oy + 44, 1, 8, pants_light)
-    _rect(c, ox + leg_l - 1, oy + 54, 7, 4, shoes)
-    _rect(c, ox + leg_r - 1, oy + 54, 7, 4, shoes)
-    _rect(c, ox + leg_l, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
-    _rect(c, ox + leg_r, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
-    _rect(c, ox + leg_l, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
-    _rect(c, ox + leg_r, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
+    if limbs:
+        if walk:
+            left = (frame - 4) in (0, 1)
+            leg_l += 2 if left else 0
+            leg_r -= 2 if left else 0
+        leg_w = 5 if slim else 6
+        _rect(c, ox + leg_l - 1, oy + 41, leg_w + 2, 14, outline)
+        _rect(c, ox + leg_r - 1, oy + 41, leg_w + 2, 14, outline)
+        _rect(c, ox + leg_l - 2, oy + 53, 9, 6, outline)
+        _rect(c, ox + leg_r - 2, oy + 53, 9, 6, outline)
+        _rect(c, ox + leg_l, oy + 42, leg_w, 12, pants)
+        _rect(c, ox + leg_r, oy + 42, leg_w, 12, pants)
+        _rect(c, ox + leg_l, oy + 44, 1, 8, pants_light)
+        _rect(c, ox + leg_r, oy + 44, 1, 8, pants_light)
+        _rect(c, ox + leg_l - 1, oy + 54, 7, 4, shoes)
+        _rect(c, ox + leg_r - 1, oy + 54, 7, 4, shoes)
+        _rect(c, ox + leg_l, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
+        _rect(c, ox + leg_r, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
+        _rect(c, ox + leg_l, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
+        _rect(c, ox + leg_r, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
 
     # body
     _rect(c, ox + body_x - 1, oy + 21, body_w + 2, 22, outline)
@@ -242,70 +243,71 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         _rect(c, ox + body_x + 2, oy + 27, 1, 9, gfx.blend(shirt, (0, 0, 0), 0.22))
 
     # arms
-    if point or show:
-        dy = 3 if point_alt else 0
-        _rect(c, ox + body_x + body_w - 2, oy + 21 + dy, 12, 4, shirt)
-        _rect(c, ox + body_x + body_w + 8, oy + 20 + dy, 4, 4, skin)
-        if show:
-            lift = -3 if show_alt else 0
-            _rect(c, ox + body_x + body_w + 10, oy + 18 + lift, 5, 5, (255, 198, 86))
-            _rect(c, ox + body_x + body_w + 11, oy + 19 + lift, 3, 3, (255, 255, 220))
-        _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
-        _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
-        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
-        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
-        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
-        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
-    elif wave or happy or victory or scared:
-        lift = 4 if wave_alt else 0
-        _rect(c, ox + body_x + body_w - 2, oy + 12 + lift, 4, 13, shirt)
-        _rect(c, ox + body_x + body_w - 1, oy + 6 + lift, 5, 7, skin)
-        _rect(c, ox + body_x - 6, oy + 25, 5, 12, shirt)
-        _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
-        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
-        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
-        left_up = (victory and not victory_alt) or happy_alt or scared_alt
-        if left_up:
-            _rect(c, ox + body_x - 5, oy + 12, 5, 15, shirt)
-            _rect(c, ox + body_x - 6, oy + 6, 6, 7, skin)
-            _rect(c, ox + body_x - 6, oy + 8, 1, 1, skin_shadow)
-            _rect(c, ox + body_x - 6, oy + 10, 1, 1, skin_shadow)
-            _rect(c, ox + body_x - 1, oy + 20, 3, 4, shirt)
-        elif victory_alt:
-            _rect(c, ox + body_x - 5, oy + 19, 5, 15, shirt)
-            _rect(c, ox + body_x - 6, oy + 14, 6, 7, skin)
-            _rect(c, ox + body_x - 1, oy + 21, 3, 3, shirt)
-    elif think:
-        hand_y = 6 if think_alt else 10
-        _rect(c, ox + body_x + body_w - 2, oy + 16, 7, 4, shirt)
-        _rect(c, ox + body_x + body_w + 3, oy + hand_y, 4, 8, skin)
-        _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
-        _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
-        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
-        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
-        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
-        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
-    elif sad:
-        drop = 2 if sad_alt else 0
-        _rect(c, ox + body_x - 6, oy + 28 + drop, 5, 12, shirt)
-        _rect(c, ox + body_x - 6, oy + 38 + drop, 5, 4, skin)
-        _rect(c, ox + body_x + body_w + 1, oy + 28 + drop, 5, 12, shirt)
-        _rect(c, ox + body_x + body_w + 1, oy + 38 + drop, 5, 4, skin)
-    elif walk:
-        swing = 2 if (frame - 4) in (0, 1) else -2
-        _rect(c, ox + body_x - 6, oy + 24 + swing, 5, 12, shirt)
-        _rect(c, ox + body_x + body_w + 1, oy + 24 - swing, 5, 12, shirt)
-    else:
-        _rect(c, ox + body_x - 5, oy + 22, 6, 14, shirt)
-        _rect(c, ox + body_x + body_w - 1, oy + 22, 6, 14, shirt)
-        _rect(c, ox + body_x - 5, oy + 33, 6, 5, skin)
-        _rect(c, ox + body_x + body_w - 1, oy + 33, 6, 5, skin)
-        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
-        _rect(c, ox + body_x + body_w + 4, oy + 22, 1, 3, shirt_light)
-        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
-        _rect(c, ox + body_x + body_w - 2, oy + 22, 3, 3, shirt)
-        _rect(c, ox + body_x - 5, oy + 31, 6, 2, (18, 22, 28))
-        _rect(c, ox + body_x - 4, oy + 31, 1, 1, accent, 220)
+    if limbs:
+        if point or show:
+            dy = 3 if point_alt else 0
+            _rect(c, ox + body_x + body_w - 2, oy + 21 + dy, 12, 4, shirt)
+            _rect(c, ox + body_x + body_w + 8, oy + 20 + dy, 4, 4, skin)
+            if show:
+                lift = -3 if show_alt else 0
+                _rect(c, ox + body_x + body_w + 10, oy + 18 + lift, 5, 5, (255, 198, 86))
+                _rect(c, ox + body_x + body_w + 11, oy + 19 + lift, 3, 3, (255, 255, 220))
+            _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
+            _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
+            _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+            _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+            _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+            _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
+        elif wave or happy or victory or scared:
+            lift = 4 if wave_alt else 0
+            _rect(c, ox + body_x + body_w - 2, oy + 12 + lift, 4, 13, shirt)
+            _rect(c, ox + body_x + body_w - 1, oy + 6 + lift, 5, 7, skin)
+            _rect(c, ox + body_x - 6, oy + 25, 5, 12, shirt)
+            _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
+            _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+            _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
+            left_up = (victory and not victory_alt) or happy_alt or scared_alt
+            if left_up:
+                _rect(c, ox + body_x - 5, oy + 12, 5, 15, shirt)
+                _rect(c, ox + body_x - 6, oy + 6, 6, 7, skin)
+                _rect(c, ox + body_x - 6, oy + 8, 1, 1, skin_shadow)
+                _rect(c, ox + body_x - 6, oy + 10, 1, 1, skin_shadow)
+                _rect(c, ox + body_x - 1, oy + 20, 3, 4, shirt)
+            elif victory_alt:
+                _rect(c, ox + body_x - 5, oy + 19, 5, 15, shirt)
+                _rect(c, ox + body_x - 6, oy + 14, 6, 7, skin)
+                _rect(c, ox + body_x - 1, oy + 21, 3, 3, shirt)
+        elif think:
+            hand_y = 6 if think_alt else 10
+            _rect(c, ox + body_x + body_w - 2, oy + 16, 7, 4, shirt)
+            _rect(c, ox + body_x + body_w + 3, oy + hand_y, 4, 8, skin)
+            _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
+            _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
+            _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+            _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+            _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+            _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
+        elif sad:
+            drop = 2 if sad_alt else 0
+            _rect(c, ox + body_x - 6, oy + 28 + drop, 5, 12, shirt)
+            _rect(c, ox + body_x - 6, oy + 38 + drop, 5, 4, skin)
+            _rect(c, ox + body_x + body_w + 1, oy + 28 + drop, 5, 12, shirt)
+            _rect(c, ox + body_x + body_w + 1, oy + 38 + drop, 5, 4, skin)
+        elif walk:
+            swing = 2 if (frame - 4) in (0, 1) else -2
+            _rect(c, ox + body_x - 6, oy + 24 + swing, 5, 12, shirt)
+            _rect(c, ox + body_x + body_w + 1, oy + 24 - swing, 5, 12, shirt)
+        else:
+            _rect(c, ox + body_x - 5, oy + 22, 6, 14, shirt)
+            _rect(c, ox + body_x + body_w - 1, oy + 22, 6, 14, shirt)
+            _rect(c, ox + body_x - 5, oy + 33, 6, 5, skin)
+            _rect(c, ox + body_x + body_w - 1, oy + 33, 6, 5, skin)
+            _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+            _rect(c, ox + body_x + body_w + 4, oy + 22, 1, 3, shirt_light)
+            _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+            _rect(c, ox + body_x + body_w - 2, oy + 22, 3, 3, shirt)
+            _rect(c, ox + body_x - 5, oy + 31, 6, 2, (18, 22, 28))
+            _rect(c, ox + body_x - 4, oy + 31, 1, 1, accent, 220)
 
     # head
     head_x = 12 if not wide else 11
@@ -459,13 +461,14 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
             _rect(c, ox + 22, oy - 5, 2, 2, (255, 198, 86))
 
 
-def build_sprite_sheet(character: dict, path: Path) -> Path:
+def build_sprite_sheet(character: dict, path: Path, limbs: bool = True) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    surf = skia.Surface(FRAME_W * SHEET_FRAMES, FRAME_H)
+    frames = SHEET_FRAMES if limbs else 1
+    surf = skia.Surface(FRAME_W * frames, FRAME_H)
     c = surf.getCanvas()
     c.clear(skia.ColorTRANSPARENT)
-    for frame in range(SHEET_FRAMES):
-        _draw_character(c, frame * FRAME_W, 0, frame, character)
+    for frame in range(frames):
+        _draw_character(c, frame * FRAME_W, 0, frame, character, limbs=limbs)
     surf.makeImageSnapshot().save(str(path), skia.kPNG)
     return path
 
@@ -528,7 +531,9 @@ class PixelRenderer:
             self.sheet_path = None
             self.sheet = None
         else:
-            self.sheet_path = build_sprite_sheet(self.character, workdir / "character.png")
+            self.sheet_path = build_sprite_sheet(
+                self.character, workdir / "character_body.png", limbs=False
+            )
             self.sheet = skia.Image.open(str(self.sheet_path))
         self.quality = str(settings.get("quality") or "quality")
         if self.quality not in ("fast", "quality", "ultra"):
@@ -1023,7 +1028,14 @@ class PixelRenderer:
             visual = _default_visual(scene.get("kind", "statement"))
 
         _rect(c, 0, 0, SW, SH, bg)
-        tint = ((64, 118, 255), (168, 76, 245), (24, 196, 178), (196, 226, 64))[int(scene_index) % 4]
+        kind = str(scene.get("kind") or "")
+        tint = {
+            "hook": (64, 140, 255),
+            "problem": (255, 82, 120),
+            "insight": (40, 214, 176),
+            "solution": (190, 255, 70),
+            "cta": (255, 188, 78),
+        }.get(kind, ((64, 118, 255), (168, 76, 245), (24, 196, 178), (196, 226, 64))[int(scene_index) % 4])
         scene_start = float(scene.get("start", 0) or 0)
         env = self._env_at(scene_start + t)
         self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
@@ -1077,18 +1089,38 @@ class PixelRenderer:
             _rect(c, 58, 76, 156, 160, gfx.blend(bg, accent, 0.12))
             _rect(c, 52, 70, 168, 2, accent, 170)
             _rect(c, 52, 70, 2, 172, accent, 70)
-            _rect(c, 196, 80, 20, 2, muted, 130)
-            _rect(c, 196, 85, 14, 2, accent2, 110)
             for i in range(5):
-                _rect(c, 60, 86 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
-            for i in range(14):
-                x = 66 + i * 10
-                pulse = 0.5 + 0.5 * math.sin(t * 1.8 + i * 0.55)
-                h = 12 + int(((i * 13) % 48) * (0.94 + 0.06 * pulse))
-                _rect(c, x, 220 - h, 6, h, accent if i % 3 else accent2)
-                _rect(c, x, 220 - h, 6, 2, highlight)
-            _rect(c, 200, 80, 12, 12, good, 180)
-            _rect(c, 216, 84, 22, 3, muted)
+                _rect(c, 60, 88 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
+            closes = []
+            for i in range(12):
+                x = 64 + i * 12
+                wobble = math.sin(t * 0.55 + i * 0.7) * 3
+                base_y = 198 - i * 7 - (i * 13) % 24
+                oy = base_y + wobble
+                cy = oy - (8 + (i * 11) % 16)
+                hi = min(oy, cy) - 5 - (i * 7) % 10
+                lo = max(oy, cy) + 4 + (i * 5) % 8
+                color = good if cy < oy else bad
+                _rect(c, x + 3, hi, 1, max(2, lo - hi), color, 190)
+                _rect(c, x, min(oy, cy), 7, max(3, abs(oy - cy)), color, 230)
+                if i == 11:
+                    _rect(c, x - 2, hi - 2, 11, max(4, lo - hi) + 4, highlight, 35)
+                closes.append((x + 3, cy))
+            for (x1, y1), (x2, y2) in zip(closes, closes[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 150)
+            ty = 108
+            for x in range(62, 210, 8):
+                _rect(c, x, ty, 4, 1, highlight, 80)
+            _rect(c, 198, ty - 3, 12, 6, highlight, 120)
+            for i in range(12):
+                x = 64 + i * 12
+                h = 4 + (i * 7) % 12
+                _rect(c, x, 232 - h, 7, h, accent if i % 3 else accent2, 60)
+            sx = 60 + int((t * 26) % 150)
+            _rect(c, sx, 78, 1, 156, highlight, 18)
+            lx, ly = closes[-1]
+            _rect(c, 196, ly - 3, 14, 6, good, 180)
+            _rect(c, 197, ly - 2, 5, 1, (10, 14, 10), 180)
         elif visual == "board":
             _rect(c, 42, 66, 178, 164, (34, 40, 42))
             _rect(c, 45, 69, 172, 158, (150, 160, 152))
@@ -1151,6 +1183,10 @@ class PixelRenderer:
         # Push the scene graphics behind the character. The character is the
         # storyteller; charts and windows are supporting context.
         _rect(c, 0, 44, SW, 196, (0, 0, 0), 26)
+        # foreground silhouettes frame the stage and add depth
+        for i in range(10):
+            _rect(c, i * 3, 350 + i * 4, 26 - i * 2, 4, (2, 4, 6), 120)
+            _rect(c, SW - 26 + i * 2, 350 + i * 4, 26 - i * 2, 4, (2, 4, 6), 120)
 
         mascot_anim = scene.get("pixel_animation") or "auto"
         if mascot_anim == "auto":
@@ -1207,24 +1243,46 @@ class PixelRenderer:
         y = 328 - FRAME_H * scale + bob
         # soft stage light + floor highlight where the character stands
         gfx.orb(c, x + char_w / 2, y + FRAME_H * scale * 0.52,
-                max(20, char_w * 0.78), accent, 8, 2)
+                max(20, char_w * 0.78), tint, 10, 2)
         _rect(c, x - 5, y + FRAME_H * scale - 2, char_w + 10, 3,
               gfx.blend(bg, accent, 0.45), 150)
         _rect(c, x + 4, y + FRAME_H * scale - 2, max(6.0, char_w - 8), 3, (0, 0, 0), 110)
+        # ---------- character acting: entrance, lean, procedural limbs
+        feet_x = x + char_w / 2
+        feet_y = y + FRAME_H * scale
+        c.save()
+        if t < 0.42:
+            k = gfx.ease_out(gfx.clamp(t / 0.42))
+            c.translate(0, (1.0 - k) * 24)
+        lean = math.sin(t * 0.85) * 0.7
+        if anim in ("point", "show"):
+            lean += -1.8
+        elif anim == "error":
+            lean += math.sin(t * 28.0) * 2.4
+        elif anim in ("victory", "happy"):
+            lean += math.sin(t * 5.5) * 1.2
+        elif anim == "sad":
+            lean += 1.6
+        c.translate(feet_x, feet_y)
+        c.rotate(lean)
+        c.translate(-feet_x, -feet_y)
         if self.custom_image is not None:
             _draw_image_sprite(c, self.custom_image, x, y, char_w, FRAME_H * scale, self.nearest)
         else:
-            # mirrored floor reflection
+            # mirrored floor reflection (body only, subtle)
             c.save()
             c.clipRect(skia.Rect.MakeXYWH(x - 4, y + FRAME_H * scale - 2, char_w + 8, 62))
             c.translate(0, y + FRAME_H * scale * 2 - 2)
             c.scale(1, -1)
-            _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale, 42)
+            _draw_sprite(c, self.sheet, x, y, 0, self.nearest, scale, 34)
             c.restore()
-            _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale)
+            _draw_limbs(c, x, y, scale, self.character, anim, t, env, part="legs")
+            _draw_sprite(c, self.sheet, x, y, 0, self.nearest, scale)
+            _draw_limbs(c, x, y, scale, self.character, anim, t, env, part="arms")
             self._draw_face_overlay(c, x, y, scale, self.character, t, anim, env, scene_index)
             if talking:
                 self._draw_voice_bars(c, x, y, char_w, scale, t, env)
+        c.restore()
         self._draw_character_fx(c, scene, t, x, y, char_w, scale, anim)
         self._draw_foreground(c, t, scene_index, anim, env, accent, accent2, highlight)
 
@@ -1308,6 +1366,10 @@ class PixelRenderer:
         gfx.draw_text(c, f"{scene_index + 1:02d}/{len(self.starts):02d}",
                       config.W - 52, 82, "mono", 17, tuple(gfx.MUTED), 180,
                       "right", tracking=1.4)
+        if int(t * 2) % 2 == 0:
+            _rect(c, config.W - 196, 74, 8, 8, tuple(gfx.BAD), 220)
+        gfx.draw_text(c, "LIVE", config.W - 182, 84, "mono", 15, tuple(gfx.BAD),
+                      210, tracking=1.4)
         n = len(self.starts)
         for i in range(n):
             x = config.W - 52 - (n - 1 - i) * 20
@@ -1346,20 +1408,42 @@ class PixelRenderer:
         anim = scene.get("pixel_animation") or "auto"
         if anim == "auto":
             anim = auto_animation(scene.get("text", ""), kind)
-        # cinematic push-in + parallax drift + impact shake
+        # cinematic scene-specific camera + impact shake
         intro = gfx.ease_out(min(1.0, t / max(0.6, min(2.2, duration * 0.35))))
-        zoom = 1.0 + (0.055 if kind in ("hook", "cta") else 0.032) * intro
-        zoom += 0.012 * math.sin(t * 0.35 + scene_index)
+        progress = gfx.clamp(t / max(0.1, duration))
+        if kind == "hook":
+            zoom = 1.045 + 0.045 * intro + 0.008 * math.sin(t * 0.45)
+        elif kind == "problem":
+            zoom = 1.055 - 0.018 * gfx.ease_out(progress)
+        elif kind == "insight":
+            zoom = 1.035 + 0.012 * math.sin(t * 0.4)
+        elif kind == "solution":
+            zoom = 1.025 + 0.05 * intro
+        elif kind == "cta":
+            zoom = 1.07 - 0.035 * gfx.ease_out(progress)
+        else:
+            zoom = 1.0 + 0.03 * intro
+        if kind in ("hook", "problem"):
+            zoom += 0.025
+        zoom = max(1.0, zoom)
         shake_x = shake_y = 0.0
         if anim in ("error", "scared"):
             shake_x = math.sin(t * 55) * 1.6
             shake_y = math.cos(t * 47) * 1.2
         src_w = SW / zoom
         src_h = SH / zoom
-        cx = SW / 2 + math.sin(t * 0.27 + scene_index * 1.3) * 1.6 + shake_x
+        cx = SW / 2 + math.sin(t * 0.27 + scene_index * 1.3) * 1.8 + shake_x
+        if kind == "insight":
+            cx += math.sin(t * 0.35) * 2.5
         cy = SH * 0.53 + shake_y
         x0 = max(0.0, min(SW - src_w, cx - src_w / 2))
         y0 = max(0.0, min(SH - src_h, cy - src_h / 2))
+        full.save()
+        if kind in ("hook", "problem"):
+            angle = math.sin(t * 0.6 + scene_index) * 0.45
+            full.translate(self.out_w / 2, self.out_h / 2)
+            full.rotate(angle)
+            full.translate(-self.out_w / 2, -self.out_h / 2)
         full.drawImageRect(
             self.low.makeImageSnapshot(),
             skia.Rect.MakeXYWH(x0, y0, src_w, src_h),
@@ -1367,6 +1451,22 @@ class PixelRenderer:
             self.nearest,
             None,
         )
+        full.restore()
+        # scene color script
+        tint = {
+            "hook": (64, 140, 255),
+            "problem": (255, 82, 120),
+            "insight": (40, 214, 176),
+            "solution": (190, 255, 70),
+            "cta": (255, 188, 78),
+        }.get(kind, (120, 140, 200))
+        grade = skia.Paint()
+        grade.setShader(skia.GradientShader.MakeLinear(
+            [skia.Point(0, 0), skia.Point(0, self.out_h)],
+            [gfx.col(tint, 0), gfx.col(tint, 10), gfx.col(tint, 0)],
+            [0.0, 0.55, 1.0],
+        ))
+        full.drawRect(skia.Rect.MakeWH(self.out_w, self.out_h), grade)
         if self.vignette is not None:
             full.drawImageRect(
                 self.vignette,
@@ -1455,12 +1555,26 @@ class PixelRenderer:
             # the TTS timeline is missing for this render.
             words = [w for w in text.split() if w]
             duration = max(1.2, end - start)
-            step = duration / max(1, len(words))
-            timed = [
-                {"w": w, "display": w, "t": i * step, "d": step * 0.9}
-                for i, w in enumerate(words)
-            ]
-            phrases = [{"t0": 0.0, "t1": duration, "text": text, "words": timed}]
+            mid = max(1, len(words) // 2) if len(words) > 10 else len(words)
+            groups = [words[:mid], words[mid:]] if mid < len(words) else [words]
+            parts = max(1, len(groups))
+            phrases = []
+            for gi, group in enumerate(groups):
+                if not group:
+                    continue
+                offset = gi * duration / parts
+                span = duration / parts
+                step = span / max(1, len(group))
+                timed = [
+                    {"w": w, "display": w, "t": offset + i * step, "d": step * 0.9}
+                    for i, w in enumerate(group)
+                ]
+                phrases.append({
+                    "t0": offset,
+                    "t1": offset + span,
+                    "text": " ".join(group),
+                    "words": timed,
+                })
         self._caption.phrases = phrases
         self._caption.p_starts = [float(p["t0"]) for p in phrases]
         self._caption.duration = max(0.1, end - start)
@@ -1501,6 +1615,149 @@ def _draw_sprite(c, sheet, x, y, frame: int, sampling, scale: float = 1.0, alpha
         paint = skia.Paint()
         paint.setAlphaf(max(0.0, min(1.0, alpha / 255.0)))
     c.drawImageRect(sheet, src, dst, sampling, paint)
+
+
+def _pixel_line(c, x0, y0, x1, y1, width, color, alpha=255):
+    """Thick pixel line with no anti-aliasing (keeps the 8/16-bit look)."""
+    steps = int(max(abs(x1 - x0), abs(y1 - y0))) + 1
+    w = max(1, int(round(width)))
+    for i in range(steps + 1):
+        u = i / max(1, steps)
+        x = x0 + (x1 - x0) * u
+        y = y0 + (y1 - y0) * u
+        _rect(c, round(x - w / 2), round(y - w / 2), w, w, color, alpha)
+
+
+def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
+    """Procedural arms and legs: continuous angles, elbows, hands and shoes."""
+    slim = ch.get("proportions") == "slim"
+    wide = ch.get("proportions") == "wide"
+    body_x = 14 if slim else 11 if wide else 12
+    body_w = 12 if slim else 18 if wide else 16
+    if ch.get("gender") == "female":
+        body_x += 1
+        body_w = max(10, body_w - 2)
+    skin = ch["skin"]
+    shirt = ch["shirt"]
+    pants = ch["pants"]
+    shoes = ch["shoes"]
+    outline = (8, 10, 14)
+    skin_shadow = gfx.blend(skin, (0, 0, 0), 0.18)
+    cuff = gfx.blend(shirt, (0, 0, 0), 0.28)
+    sway = math.sin(t * 1.65) * 4.0
+    breath = math.sin(t * 2.1) * 2.0
+
+    def arm(sh, a1, a2, sleeve=shirt):
+        a1r = math.radians(a1)
+        a2r = math.radians(a1 + a2)
+        ex = sh[0] + math.cos(a1r) * 7.4
+        ey = sh[1] + math.sin(a1r) * 7.4
+        hx = ex + math.cos(a2r) * 7.8
+        hy = ey + math.sin(a2r) * 7.8
+        sx, sy = ox + sh[0] * scale, oy + sh[1] * scale
+        exx, eyy = ox + ex * scale, oy + ey * scale
+        hxx, hyy = ox + hx * scale, oy + hy * scale
+        _pixel_line(c, sx, sy, exx, eyy, 4.6 * scale, outline)
+        _pixel_line(c, exx, eyy, hxx, hyy, 4.2 * scale, outline)
+        _pixel_line(c, sx, sy, exx, eyy, 4.0 * scale, sleeve)
+        _pixel_line(c, exx, eyy, hxx, hyy, 3.6 * scale, skin)
+        _pixel_line(c, sx, sy, sx + (exx - sx) * 0.35, sy + (eyy - sy) * 0.35,
+                    1.2 * scale, gfx.blend(sleeve, (255, 255, 255), 0.20))
+        # cuff + watch
+        _rect(c, exx - 2.0 * scale, eyy - 2.0 * scale, 4 * scale, 4 * scale, cuff)
+        _rect(c, exx - 2.0 * scale, eyy - 2.0 * scale, 4 * scale, 1 * scale,
+              tuple(gfx.ACCENT), 210)
+        # hand + fingers
+        hw = max(2, int(round(4.0 * scale)))
+        _rect(c, hxx - hw / 2, hyy - hw / 2, hw, hw, skin)
+        _rect(c, hxx - hw / 2, hyy - hw / 2, hw, max(1, int(scale * 0.7)),
+              gfx.blend(skin, (255, 255, 255), 0.18))
+        _rect(c, hxx - hw / 2 + hw * 0.18, hyy - hw / 2 + hw * 0.62,
+              max(1, int(scale * 0.55)), max(1, int(scale * 0.55)), skin_shadow)
+        _rect(c, hxx - hw / 2 + hw * 0.62, hyy - hw / 2 + hw * 0.62,
+              max(1, int(scale * 0.55)), max(1, int(scale * 0.55)), skin_shadow)
+        # pointing finger
+        fx = hxx + math.cos(a2r) * 2.0 * scale
+        fy = hyy + math.sin(a2r) * 2.0 * scale
+        _pixel_line(c, hxx, hyy, fx, fy, max(1, int(scale * 0.8)), skin)
+
+    def leg(hip, a1, a2):
+        a1r = math.radians(a1)
+        a2r = math.radians(a1 + a2)
+        kx = hip[0] + math.cos(a1r) * 7.5
+        ky = hip[1] + math.sin(a1r) * 7.5
+        ax = kx + math.cos(a2r) * 7.5
+        ay = ky + math.sin(a2r) * 7.5
+        hx, hy = ox + hip[0] * scale, oy + hip[1] * scale
+        kxx, kyy = ox + kx * scale, oy + ky * scale
+        axx, ayy = ox + ax * scale, oy + ay * scale
+        _pixel_line(c, hx, hy, kxx, kyy, 5.0 * scale, outline)
+        _pixel_line(c, kxx, kyy, axx, ayy, 4.8 * scale, outline)
+        _pixel_line(c, hx, hy, kxx, kyy, 4.2 * scale, pants)
+        _pixel_line(c, kxx, kyy, axx, ayy, 4.0 * scale, pants)
+        _pixel_line(c, hx, hy, kxx, kyy, 1.1 * scale,
+                    gfx.blend(pants, (255, 255, 255), 0.12))
+        # shoe follows the ankle
+        sw, sh = 8.0 * scale, 3.6 * scale
+        _rect(c, axx - 4.3 * scale, ayy - 1.0 * scale, sw + 1.8 * scale, sh + 1.4 * scale, outline)
+        _rect(c, axx - 3.8 * scale, ayy - 0.7 * scale, sw, sh, shoes)
+        _rect(c, axx - 2.6 * scale, ayy + 0.2 * scale, 4.0 * scale, 0.9 * scale,
+              gfx.blend(shoes, (255, 255, 255), 0.18))
+
+    if part == "legs":
+        hip_l = (body_x + 3, 39)
+        hip_r = (body_x + body_w - 3, 39)
+        a_l, e_l, a_r, e_r = 88, 4, 92, 4
+        if anim == "walk":
+            swing = math.sin(t * 7.2) * 24
+            a_l, e_l = 88 + swing, max(0, -swing * 0.45)
+            a_r, e_r = 88 - swing, max(0, swing * 0.45)
+        elif anim in ("victory", "happy"):
+            a_l, e_l = 78, 26
+            a_r, e_r = 82, 22
+        elif anim in ("sad", "error"):
+            a_l, e_l = 92, 0
+            a_r, e_r = 88, 0
+        elif anim == "scared":
+            a_l, e_l = 84, 10
+            a_r, e_r = 96, 10
+        leg(hip_l, a_l, e_l)
+        leg(hip_r, a_r, e_r)
+        return
+
+    sh_l = (body_x, 24)
+    sh_r = (body_x + body_w, 24)
+    a_l, e_l = 98 + sway * 0.4, 6
+    a_r, e_r = 82 - sway * 0.4, 6
+    if anim in ("point", "show"):
+        a_r, e_r = 4, -2
+        a_l, e_l = 100, 8
+    elif anim in ("wave", "happy", "victory", "scared"):
+        a_r, e_r = -66, -20
+        a_l, e_l = 100, 8
+        if anim in ("victory", "scared", "happy"):
+            a_l, e_l = -114, 18
+    elif anim == "think":
+        a_r, e_r = -118, -68
+        a_l, e_l = 100, 8
+    elif anim == "sad":
+        a_l, e_l = 108, 16
+        a_r, e_r = 72, -16
+    elif anim == "error":
+        a_l, e_l = 148, 18
+        a_r, e_r = 32, -18
+    elif anim == "walk":
+        swing = math.sin(t * 7.2) * 26
+        a_l, e_l = 92 + swing, 8
+        a_r, e_r = 92 - swing, 8
+    elif anim in ("talk", "explain"):
+        a_r, e_r = 58 + 8 * math.sin(t * 3.4) + env * 18, 46
+        a_l, e_l = 100, 8
+    else:
+        a_l, e_l = 96 + sway * 0.5, 8
+        a_r, e_r = 84 - sway * 0.5, 8
+    arm(sh_l, a_l, e_l)
+    arm(sh_r, a_r, e_r)
 
 
 def _draw_image_sprite(c, image, x, y, max_w: float, max_h: float, sampling):

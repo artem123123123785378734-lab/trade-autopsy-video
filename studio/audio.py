@@ -190,6 +190,36 @@ def chime(amp=0.2) -> np.ndarray:
     return x * np.exp(-t * 4.2) * amp
 
 
+def riser(dur=0.7, amp=0.18) -> np.ndarray:
+    n = int(dur * config.SR)
+    t = np.linspace(0, 1, n, dtype=np.float32)
+    freq = 180 + 880 * t ** 1.5
+    phase = np.cumsum(2 * np.pi * freq / config.SR)
+    tone = 0.45 * np.sin(phase) + 0.35 * RNG.normal(0, 1, n)
+    return (tone * t ** 1.8 * amp).astype(np.float32)
+
+
+def buzz(dur=0.35, amp=0.16) -> np.ndarray:
+    n = int(dur * config.SR)
+    t = np.arange(n) / config.SR
+    tone = np.sign(np.sin(2 * np.pi * 95 * t)) * np.exp(-t * 7)
+    grit = RNG.normal(0, 0.22, n) * np.exp(-t * 10)
+    return ((tone + grit) * amp).astype(np.float32)
+
+
+def sparkle(amp=0.14) -> np.ndarray:
+    n = int(0.9 * config.SR)
+    out = np.zeros(n, dtype=np.float32)
+    for i, freq in enumerate((1046.5, 1318.5, 1568.0, 2093.0)):
+        m = int(0.55 * config.SR)
+        t = np.arange(m) / config.SR
+        sig = np.sin(2 * np.pi * freq * t) * np.exp(-t * 7.5)
+        start = int(i * 0.06 * config.SR)
+        end = min(n, start + m)
+        out[start:end] += sig[:end - start]
+    return (out * amp).astype(np.float32)
+
+
 # ---------------------------------------------------------------- music
 def build_music(duration: float, preset: str, seed: int = 7) -> np.ndarray:
     if preset == "none":
@@ -262,10 +292,18 @@ def build_sfx(plan: dict) -> np.ndarray:
             add(out, max(0, st - 0.28), whoosh(0.5, 0.20), 0.55, pan=0.0)
         add(out, st, impact(0.28 if i else 0.45), 0.65)
         kind = s.get("kind")
+        if kind == "hook":
+            add(out, max(0, st - 0.12), riser(0.7, 0.16), 0.5)
+        elif kind in ("problem", "error"):
+            add(out, st + 0.4, buzz(0.35, 0.16), 0.4, pan=-0.2)
+        elif kind in ("insight", "solution"):
+            add(out, st + 0.42, pop(620, 0.07), 0.4, pan=0.15)
         if kind in ("stat", "dashboard", "bars") and s.get("metric"):
             add(out, st + 0.42, pop(820, 0.09), 0.5, pan=0.15)
         if kind == "cta":
             add(out, st + 0.5, chime(0.16), 0.7, pan=0.0)
+            add(out, st + 0.78, sparkle(0.13), 0.55)
+        add(out, st + 0.44, pop(740, 0.045), 0.25, pan=0.2)
     return out
 
 
