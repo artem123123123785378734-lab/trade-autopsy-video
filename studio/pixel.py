@@ -16,8 +16,10 @@ import math
 import shutil
 import subprocess
 import time
+import wave
 from pathlib import Path
 
+import numpy as np
 import skia
 
 from . import config, gfx, render
@@ -207,6 +209,8 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
     _rect(c, ox + leg_r - 1, oy + 54, 7, 4, shoes)
     _rect(c, ox + leg_l, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
     _rect(c, ox + leg_r, oy + 55, 3, 1, gfx.blend(shoes, (255, 255, 255), 0.18))
+    _rect(c, ox + leg_l, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
+    _rect(c, ox + leg_r, oy + 57, 5, 1, gfx.blend(shoes, (255, 255, 255), 0.10))
 
     # body
     _rect(c, ox + body_x - 1, oy + 21, body_w + 2, 22, outline)
@@ -222,6 +226,18 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
     _rect(c, ox + body_x + body_w - 5, oy + 33, 3, 1, shirt_shadow)
     _rect(c, ox + body_x, oy + 38, body_w, 2, outline)
     _rect(c, ox + body_x + body_w // 2 - 1, oy + 38, 2, 2, accent)
+    # jacket / vest detail — reads as tailoring even at 40x60
+    jacket = gfx.blend(shirt, (10, 12, 16), 0.55)
+    jacket_light = gfx.blend(jacket, (255, 255, 255), 0.10)
+    _rect(c, ox + body_x, oy + 22, 3, 18, jacket)
+    _rect(c, ox + body_x + body_w - 3, oy + 22, 3, 18, jacket)
+    _rect(c, ox + body_x + 3, oy + 22, 1, 6, jacket_light)
+    _rect(c, ox + body_x + body_w - 4, oy + 22, 1, 6, jacket_light)
+    _rect(c, ox + body_x + 4, oy + 29, 1, 9, jacket)
+    _rect(c, ox + body_x + body_w - 5, oy + 29, 1, 9, jacket)
+    _rect(c, ox + body_x + 4, oy + 30, 2, 2, accent)
+    _pixel(c, ox + body_x + 4, oy + 30, (255, 255, 255), 170)
+    _rect(c, ox + body_x + 4, oy + 21, max(2, body_w - 8), 2, skin_shadow)
     if style == "detailed":
         _rect(c, ox + body_x + 2, oy + 27, 1, 9, gfx.blend(shirt, (0, 0, 0), 0.22))
 
@@ -234,27 +250,41 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
             lift = -3 if show_alt else 0
             _rect(c, ox + body_x + body_w + 10, oy + 18 + lift, 5, 5, (255, 198, 86))
             _rect(c, ox + body_x + body_w + 11, oy + 19 + lift, 3, 3, (255, 255, 220))
-        _rect(c, ox + body_x - 6, oy + 26, 5, 11, shirt)
-        _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
+        _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
     elif wave or happy or victory or scared:
         lift = 4 if wave_alt else 0
         _rect(c, ox + body_x + body_w - 2, oy + 12 + lift, 4, 13, shirt)
         _rect(c, ox + body_x + body_w - 1, oy + 6 + lift, 5, 7, skin)
         _rect(c, ox + body_x - 6, oy + 25, 5, 12, shirt)
         _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
+        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
         left_up = (victory and not victory_alt) or happy_alt or scared_alt
         if left_up:
-            _rect(c, ox + body_x - 6, oy + 12, 4, 13, shirt)
-            _rect(c, ox + body_x - 7, oy + 6, 5, 7, skin)
+            _rect(c, ox + body_x - 5, oy + 12, 5, 15, shirt)
+            _rect(c, ox + body_x - 6, oy + 6, 6, 7, skin)
+            _rect(c, ox + body_x - 6, oy + 8, 1, 1, skin_shadow)
+            _rect(c, ox + body_x - 6, oy + 10, 1, 1, skin_shadow)
+            _rect(c, ox + body_x - 1, oy + 20, 3, 4, shirt)
         elif victory_alt:
-            _rect(c, ox + body_x - 6, oy + 19, 4, 13, shirt)
-            _rect(c, ox + body_x - 7, oy + 14, 5, 7, skin)
+            _rect(c, ox + body_x - 5, oy + 19, 5, 15, shirt)
+            _rect(c, ox + body_x - 6, oy + 14, 6, 7, skin)
+            _rect(c, ox + body_x - 1, oy + 21, 3, 3, shirt)
     elif think:
         hand_y = 6 if think_alt else 10
         _rect(c, ox + body_x + body_w - 2, oy + 16, 7, 4, shirt)
         _rect(c, ox + body_x + body_w + 3, oy + hand_y, 4, 8, skin)
-        _rect(c, ox + body_x - 6, oy + 26, 5, 11, shirt)
-        _rect(c, ox + body_x - 6, oy + 36, 5, 4, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 6, 15, shirt)
+        _rect(c, ox + body_x - 5, oy + 35, 6, 5, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+        _rect(c, ox + body_x - 6, oy + 32, 5, 2, (18, 22, 28))
+        _rect(c, ox + body_x - 5, oy + 32, 1, 1, accent, 220)
     elif sad:
         drop = 2 if sad_alt else 0
         _rect(c, ox + body_x - 6, oy + 28 + drop, 5, 12, shirt)
@@ -266,10 +296,16 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
         _rect(c, ox + body_x - 6, oy + 24 + swing, 5, 12, shirt)
         _rect(c, ox + body_x + body_w + 1, oy + 24 - swing, 5, 12, shirt)
     else:
-        _rect(c, ox + body_x - 6, oy + 24, 5, 12, shirt)
-        _rect(c, ox + body_x + body_w + 1, oy + 24, 5, 12, shirt)
-        _rect(c, ox + body_x - 6, oy + 34, 5, 4, skin)
-        _rect(c, ox + body_x + body_w + 1, oy + 34, 5, 4, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 6, 14, shirt)
+        _rect(c, ox + body_x + body_w - 1, oy + 22, 6, 14, shirt)
+        _rect(c, ox + body_x - 5, oy + 33, 6, 5, skin)
+        _rect(c, ox + body_x + body_w - 1, oy + 33, 6, 5, skin)
+        _rect(c, ox + body_x - 5, oy + 22, 1, 3, shirt_light)
+        _rect(c, ox + body_x + body_w + 4, oy + 22, 1, 3, shirt_light)
+        _rect(c, ox + body_x - 1, oy + 22, 3, 3, shirt)
+        _rect(c, ox + body_x + body_w - 2, oy + 22, 3, 3, shirt)
+        _rect(c, ox + body_x - 5, oy + 31, 6, 2, (18, 22, 28))
+        _rect(c, ox + body_x - 4, oy + 31, 1, 1, accent, 220)
 
     # head
     head_x = 12 if not wide else 11
@@ -348,6 +384,8 @@ def _draw_character(c, ox, oy, frame: int, ch: dict):
                 _rect(c, ox + 10, oy + 12, 3, 10, hair)
                 _rect(c, ox + 27, oy + 12, 3, 10, hair)
             _rect(c, ox + 12, oy + 4, 7, 1, gfx.blend(hair, (255, 255, 255), 0.24))
+            _rect(c, ox + 13, oy + 4, 1, 6, gfx.blend(hair, (0, 0, 0), 0.25))
+            _rect(c, ox + 24, oy + 5, 1, 5, gfx.blend(hair, (255, 255, 255), 0.12))
         # eyes / mouth
         if blink:
             _rect(c, ox + 15, oy + 12, 2, 1, eye)
@@ -501,6 +539,7 @@ class PixelRenderer:
         self.low = skia.Surface(SW, SH)
         self.full = skia.Surface(self.out_w, self.out_h)
         self.nearest = skia.SamplingOptions(skia.FilterMode.kNearest)
+        self.linear = skia.SamplingOptions(skia.FilterMode.kLinear)
         self.starts = [float(s.get("start", 0)) for s in plan.get("scenes", [])]
         self.duration = float(plan.get("duration", 0) or 0)
         self._caption = render.Renderer(
@@ -508,6 +547,56 @@ class PixelRenderer:
             settings, fast=False,
         )
         self._caption._scrim = self._caption._make_scrim()
+        self.audio_env: list[float] = []
+        self.vignette = None
+        self.grain: list = []
+        try:
+            self.vignette = gfx.make_vignette()
+        except Exception:
+            self.vignette = None
+        try:
+            self.grain = gfx.make_grain(5, (540, 960), seed=round(time.time()) % 997)
+        except Exception:
+            self.grain = []
+
+    def set_audio(self, path: Path) -> None:
+        """Voice envelope per video frame — drives mouth, head and equalizer."""
+        try:
+            with wave.open(str(path), "rb") as w:
+                sr, n, ch = w.getframerate(), w.getnframes(), w.getnchannels()
+                raw = w.readframes(n)
+            x = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+            if ch > 1:
+                x = x.reshape(-1, ch).mean(axis=1)
+            step = max(1, int(sr / config.FPS))
+            frames = max(1, len(x) // step)
+            env = np.array([
+                float(np.sqrt(np.mean(x[i * step:(i + 1) * step] ** 2)))
+                for i in range(frames)
+            ], dtype=np.float32)
+            if env.size:
+                env = np.convolve(env, np.ones(3, dtype=np.float32) / 3, mode="same")
+                peak = float(np.percentile(env, 95)) or 1.0
+                env = np.clip(env / (peak * 1.08), 0.0, 1.0)
+            out: list[float] = []
+            level = 0.0
+            for value in env:
+                if value > level:
+                    level = level * 0.45 + value * 0.55
+                else:
+                    level = level * 0.82 + value * 0.18
+                out.append(level)
+            self.audio_env = out
+        except Exception:
+            self.audio_env = []
+
+    def _env_at(self, global_t: float) -> float:
+        if not self.audio_env:
+            return 0.0
+        idx = int(max(0.0, global_t) * config.FPS)
+        if idx >= len(self.audio_env):
+            return 0.0
+        return self.audio_env[idx]
 
     # ---------------------------------------------------------------- world
     def _palette(self):
@@ -580,6 +669,250 @@ class PixelRenderer:
                 x = (i * 53 + int(t * 7)) % SW
                 y = 52 + (i * 31) % 120
                 _rect(c, x, y, 3, 3, highlight, 55)
+
+    def _draw_sky(self, c, t, scene_index, tint, accent, accent2, highlight, text, bg):
+        for i in range(16):
+            u = i / 15.0
+            shade = gfx.blend(gfx.blend(bg, tint, 0.05 + 0.14 * u), (0, 0, 0), 0.22 * (1.0 - u))
+            _rect(c, 0, i * 16, SW, 18, shade)
+        gfx.orb(c, SW * 0.52, 226, 156, tint, 24, 5)
+        mx, my, mr = 218, 58, 8
+        for dy in range(-mr, mr + 1):
+            half = int(math.sqrt(max(0, mr * mr - dy * dy)))
+            _rect(c, mx - half, my + dy, half * 2, 1, (226, 232, 214), 150)
+        _rect(c, mx - 3, my - 2, 2, 2, (196, 204, 188), 120)
+        _rect(c, mx + 2, my + 2, 3, 1, (196, 204, 188), 110)
+        _rect(c, mx - 1, my + 5, 2, 1, (196, 204, 188), 90)
+        for layer, (count, speed, alpha) in enumerate(((46, 2, 80), (24, 4, 110), (12, 7, 150))):
+            for i in range(count):
+                sx = (i * 73 + layer * 31 + int(t * speed)) % SW
+                sy = (i * 29 + layer * 17) % 214
+                tw = 0.45 + 0.55 * (0.5 + 0.5 * math.sin(t * 2.4 + i * 1.7 + layer))
+                _pixel(c, sx, sy, highlight if i % 4 else text, int(alpha * tw))
+        for i in range(3):
+            cx = (i * 118 + int(t * 3.5)) % (SW + 90) - 45
+            cy = 92 + i * 26
+            for j in range(4):
+                _rect(c, cx + j * 8, cy + (j % 2), 12, 4, gfx.blend(bg, tint, 0.26), 38)
+            _rect(c, cx + 5, cy - 3, 18, 3, gfx.blend(bg, tint, 0.30), 30)
+
+    def _draw_city(self, c, t, scene_index, tint, accent, accent2, highlight, bg):
+        dx = int(math.sin(t * 0.16 + scene_index * 0.9) * 4)
+        for i in range(12):
+            w = 18 + (i * 7) % 14
+            h = 26 + (i * 13) % 46
+            x = (i * 26 + dx) % (SW + 30) - 20
+            y = 208 - h
+            _rect(c, x, y, w, h, gfx.blend(bg, tint, 0.10), 175)
+            _rect(c, x, y, w, 2, gfx.blend(accent, (0, 0, 0), 0.3), 70)
+            for wy in range(y + 6, 204, 9):
+                for wx in range(x + 3, x + w - 2, 7):
+                    if (wx + wy + i) % 5 < 2:
+                        _rect(c, wx, wy, 2, 3, highlight, 38)
+        for i in range(8):
+            w = 22 + (i * 11) % 16
+            h = 40 + (i * 17) % 58
+            x = (i * 39 + dx * 2) % (SW + 40) - 25
+            y = 210 - h
+            _rect(c, x, y, w, h, gfx.blend(gfx.blend(bg, tint, 0.17), (0, 0, 0), 0.18), 215)
+            _rect(c, x, y, w, 2, gfx.blend(accent, (0, 0, 0), 0.25), 90)
+            for wy in range(y + 6, 204, 11):
+                for wx in range(x + 4, x + w - 3, 9):
+                    if (wx * 3 + wy + i) % 7 < 3:
+                        _rect(c, wx, wy, 3, 3, highlight if i % 3 else accent2, 50)
+            _rect(c, x + w // 2, max(0, y - 9), 1, 9, gfx.blend(tint, (0, 0, 0), 0.2), 130)
+            _pixel(c, x + w // 2, max(0, y - 10), (255, 96, 96),
+                   90 + int(60 * (0.5 + 0.5 * math.sin(t * 5 + i))))
+            if i in (1, 4, 6):
+                col = accent2 if i % 2 else accent
+                _rect(c, x + 2, y + 10, 2, max(2, h - 18), col, 40)
+                _rect(c, x + 2, y + 10, 2, 2, (255, 255, 255), 70)
+        drone_x = int(t * 11 + scene_index * 47) % (SW + 20) - 10
+        drone_y = 68 + int(math.sin(t * 1.7) * 6)
+        _rect(c, drone_x, drone_y, 3, 1, (10, 12, 16), 200)
+        _pixel(c, drone_x - 1, drone_y, (255, 80, 80), 160)
+        _pixel(c, drone_x + 3, drone_y, (80, 220, 255), 160)
+
+    def _draw_beams(self, c, t, accent2, highlight):
+        for i in range(3):
+            alpha = 4 + i * 2
+            for y in range(54, 340, 6):
+                x = 148 + i * 26 + int((y - 54) * 0.42)
+                _rect(c, x, y, 12 + i * 5, 6, accent2 if i % 2 else highlight, alpha)
+
+    def _draw_floor(self, c, t, scene_index, tint, accent, accent2, highlight):
+        for i in range(-2, 9):
+            for step in range(10):
+                u = step / 9.0
+                x = SW / 2 + (i * 42 - SW / 2) * (0.15 + 0.85 * u)
+                y = 340 + 140 * u
+                _rect(c, x, y, 1, 4, accent, 9)
+        for y in range(350, 480, 14):
+            _rect(c, 0, y, SW, 1, accent, 9)
+        for i in range(4):
+            y = 392 + i * 20
+            _rect(c, 26 + i * 16, y, 74 - i * 8, 2, tint, 16)
+            _rect(c, 150 - i * 10, y + 6, 56 + i * 10, 1, accent2, 13)
+        for i in range(3):
+            _rect(c, 0, 318 + i * 7, SW, 7, gfx.blend(tint, (0, 0, 0), 0.4), 12)
+
+    def _draw_foreground(self, c, t, scene_index, anim, env, accent, accent2, highlight):
+        for i in range(18):
+            x = (i * 47 + int(t * (3 + i % 4))) % SW
+            y = (i * 31 + int(t * (2 + i % 3))) % 342
+            a = 34 + (i * 17) % 86
+            if env > 0.4 and abs(x - SW / 2) < 70:
+                a += 30
+            _pixel(c, x, y, highlight if i % 3 else accent2, a)
+        if anim in ("sad", "error"):
+            for i in range(16):
+                x = (i * 41 + int(t * 70)) % SW
+                y = (i * 53 + int(t * 120)) % 480
+                _rect(c, x, y, 1, 4, highlight, 30)
+        if anim in ("victory", "happy"):
+            for i in range(14):
+                x = (i * 37 + int(t * 20)) % SW
+                y = (i * 43 + int(t * 35)) % 300
+                _rect(c, x, y, 2, 2, (accent, accent2, highlight)[i % 3], 80)
+
+    def _draw_face_overlay(self, c, x, y, scale, ch, t, anim, env, scene_index):
+        if ch.get("type") not in ("human", "fantasy"):
+            return
+        s = scale
+        head_x = 12.0
+        eye_y = 11.0
+        eye1, eye2 = head_x + 3, head_x + 11
+        phase = (t + scene_index * 0.7) % 4.4
+        blink = phase < 0.13
+        if blink:
+            _rect(c, x + eye1 * s, y + eye_y * s, 2 * s, 1 * s, ch["skin"], 255)
+            _rect(c, x + eye2 * s, y + eye_y * s, 2 * s, 1 * s, ch["skin"], 255)
+        else:
+            dx = 0
+            dy = 0
+            if anim in ("point", "show"):
+                dx = 1
+            elif anim == "think":
+                dx, dy = -1, -1
+            elif anim in ("scared", "surprise"):
+                dy = -1
+            dx = max(-1, min(1, dx + int(round(math.sin(t * 1.1) * 0.5))))
+            for ex in (eye1, eye2):
+                _rect(c, x + (ex + dx) * s, y + (eye_y + dy) * s, 1 * s, 1 * s,
+                      ch["eye_color"], 255)
+                _pixel(c, x + (ex + dx) * s, y + (eye_y + dy) * s, (245, 245, 255), 190)
+        brow_y = 8.0 if anim not in ("scared", "surprise") else 7.0
+        brow = (18, 22, 28)
+        if anim in ("error", "scared", "surprise"):
+            _rect(c, x + (eye1 - 1) * s, y + brow_y * s, 4 * s, 1 * s, brow, 220)
+            _rect(c, x + (eye2 - 1) * s, y + brow_y * s, 4 * s, 1 * s, brow, 220)
+        elif anim in ("think", "sad"):
+            _rect(c, x + eye1 * s, y + (brow_y + 1) * s, 3 * s, 1 * s, brow, 200)
+            _rect(c, x + (eye2 - 1) * s, y + brow_y * s, 3 * s, 1 * s, brow, 200)
+        mouth_x = head_x + 6
+        mouth_y = 16.0
+        dark = (18, 22, 28)
+        if anim in ("victory", "happy") or ch.get("expression") == "smile":
+            _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, 1 * s, dark, 240)
+            _rect(c, x + (mouth_x - 1) * s, y + (mouth_y - 1) * s, 1 * s, 1 * s, dark, 220)
+            _rect(c, x + (mouth_x + 3) * s, y + (mouth_y - 1) * s, 1 * s, 1 * s, dark, 220)
+        elif anim == "sad" or ch.get("expression") == "sad":
+            _rect(c, x + mouth_x * s, y + (mouth_y + 1) * s, 3 * s, 1 * s, dark, 230)
+        elif env > 0.08:
+            mh = 1 + int(env * 1.8)
+            _rect(c, x + mouth_x * s, y + (mouth_y - 1) * s, 3 * s, 1 * s,
+                  (120, 70, 60), 230)
+            _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, mh * s,
+                  (42, 18, 26), 245)
+            if mh > 1:
+                _rect(c, x + (mouth_x + 1) * s, y + (mouth_y + mh - 1) * s,
+                      1 * s, 1 * s, (176, 88, 94), 220)
+        else:
+            _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, 1 * s, dark, 230)
+        if anim in ("victory", "happy"):
+            _rect(c, x + (head_x + 1) * s, y + 14 * s, 2 * s, 1 * s, (235, 110, 130), 90)
+            _rect(c, x + (head_x + 11) * s, y + 14 * s, 2 * s, 1 * s, (235, 110, 130), 90)
+        if anim in ("scared", "error"):
+            _rect(c, x + (head_x + 14) * s, y + 9 * s, 1 * s, 2 * s, (120, 220, 255), 170)
+        if ch.get("accessory") == "glasses":
+            gx = head_x + 3 + int((math.sin(t * 2.4) + 1) * 1.5)
+            _pixel(c, x + gx * s, y + 11 * s, (255, 255, 255), 150)
+
+    def _draw_voice_bars(self, c, x, y, char_w, scale, t, env):
+        base_y = 302
+        for i in range(7):
+            h = 2 + int(12 * env * (0.55 + 0.45 * math.sin(t * 7 + i * 1.25)))
+            bx = x + char_w + 5 + i * 3
+            if bx > SW - 3:
+                break
+            _rect(c, bx, base_y - h, 2, h,
+                  (tuple(gfx.ACCENT) if i % 2 else tuple(gfx.HIGHLIGHT)), 135)
+
+    def _draw_cards(self, c, scene, t):
+        kind = str(scene.get("kind") or "")
+        if kind in ("chart", "stat", "bars", "dashboard", "terminal"):
+            cards = [("PNL", "+$1 240", tuple(gfx.GREEN), (0.2, 0.3, 0.25, 0.5, 0.45, 0.7, 0.9)),
+                     ("РИСК", "1 : 3", tuple(gfx.ACCENT), (0.7, 0.6, 0.65, 0.4, 0.5, 0.35, 0.3))]
+        elif kind in ("checklist", "timeline", "compare"):
+            cards = [("ПЛАН", "4 ШАГА", tuple(gfx.ACCENT2), (0.2, 0.35, 0.3, 0.55, 0.7, 0.8, 0.95)),
+                     ("ГОТОВО", "2 / 4", tuple(gfx.GREEN), (0.1, 0.25, 0.4, 0.35, 0.5, 0.6, 0.7))]
+        elif kind == "cta":
+            cards = [("ЖУРНАЛ", "7 ДНЕЙ", tuple(gfx.ACCENT), (0.2, 0.3, 0.45, 0.6, 0.75, 0.85, 0.95)),
+                     ("СТАРТ", "СЕГОДНЯ", tuple(gfx.GREEN), (0.1, 0.2, 0.3, 0.4, 0.5, 0.65, 0.8))]
+        elif kind in ("problem", "error"):
+            cards = [("ОШИБКИ", "3", tuple(gfx.BAD), (0.8, 0.7, 0.75, 0.5, 0.62, 0.42, 0.3)),
+                     ("РИСК", "3 : 1", tuple(gfx.ACCENT), (0.3, 0.4, 0.35, 0.55, 0.45, 0.6, 0.7))]
+        elif kind == "hook":
+            cards = [("МИНУС", "-$420", tuple(gfx.BAD), (0.8, 0.7, 0.6, 0.45, 0.5, 0.3, 0.2)),
+                     ("ПРИЧИНА", "?", tuple(gfx.ACCENT), (0.2, 0.3, 0.25, 0.4, 0.35, 0.5, 0.6))]
+        elif kind in ("insight", "quote"):
+            cards = [("СДЕЛКИ", "12", tuple(gfx.ACCENT), (0.2, 0.4, 0.35, 0.55, 0.6, 0.78, 0.9)),
+                     ("ВИНРЕЙТ", "58%", tuple(gfx.GREEN), (0.3, 0.35, 0.5, 0.45, 0.6, 0.7, 0.8))]
+        elif kind == "solution":
+            cards = [("PNL", "+$1 240", tuple(gfx.GREEN), (0.2, 0.3, 0.4, 0.55, 0.7, 0.8, 0.95)),
+                     ("РИСК", "1 : 3", tuple(gfx.ACCENT), (0.7, 0.6, 0.55, 0.45, 0.5, 0.35, 0.3))]
+        else:
+            cards = [("СДЕЛКИ", "12", tuple(gfx.ACCENT), (0.2, 0.4, 0.35, 0.55, 0.6, 0.78, 0.9)),
+                     ("ВИНРЕЙТ", "58%", tuple(gfx.GREEN), (0.3, 0.35, 0.5, 0.45, 0.6, 0.7, 0.8))]
+        positions = ((30, 1086, 270, 126, -1, 0.38), (780, 1116, 270, 120, 1, 0.52))
+        for (label, value, color, spark), (x, y, w, h, side, delay) in zip(cards, positions):
+            k = gfx.ease_out(gfx.clamp((t - delay) / 0.5))
+            if k <= 0.01:
+                continue
+            dx = int((1 - k) * side * 180)
+            xx = x + dx
+            gfx.rrect(c, xx, y, w, h, 18, fill=(5, 9, 15), alpha=int(205 * k),
+                      stroke=color, sw=1.2)
+            gfx.rrect(c, xx, y, 4, h, 0, fill=color, alpha=int(220 * k))
+            gfx.draw_text(c, label, xx + 20, y + 34, "mono", 17, gfx.MUTED,
+                          int(210 * k), tracking=1.5)
+            gfx.draw_text(c, value, xx + 20, y + 82, "black", 40, color,
+                          int(250 * k), tracking=-0.6)
+            pts = []
+            for i, v in enumerate(spark):
+                pts.append((xx + 24 + i * 36, y + h - 18 - v * 54))
+            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+                gfx.line(c, x1, y1, x2, y2, color, 3, int(190 * k), cap=False)
+            gfx.dot(c, pts[-1][0], pts[-1][1], 4, color, int(230 * k))
+
+    def _draw_ticker(self, c, t):
+        y = 1632
+        gfx.rrect(c, 40, y, config.W - 80, 34, 10, fill=(4, 8, 12), alpha=120)
+        text = ("BTC +2.4%    ETH -1.1%    S&P +0.6%    EUR/USD 1.08    "
+                "GOLD +0.3%    NASDAQ -0.4%")
+        tw = gfx.text_w(text, "mono", 18, 1.2)
+        span = tw + 90
+        start = 54 - int((t * 48) % span)
+        for k in range(2):
+            gfx.draw_text(c, text, start + k * span, y + 23, "mono", 18,
+                          gfx.MUTED, 150, tracking=1.2)
+
+    def _draw_disclaimer(self, c):
+        text = str(self.settings.get("disclaimer") or "").strip()
+        if not text:
+            return
+        gfx.draw_text(c, text.upper(), config.W / 2, 1808, "mono", 15,
+                      gfx.MUTED, 120, "center", tracking=1.0)
 
     def _draw_mascot(self, c, t, anim, tint):
         if self.settings.get("pixel_mascot", True) is False:
@@ -689,31 +1022,22 @@ class PixelRenderer:
 
         _rect(c, 0, 0, SW, SH, bg)
         tint = ((64, 118, 255), (168, 76, 245), (24, 196, 178), (196, 226, 64))[int(scene_index) % 4]
-        # sky / wall bands with a different tint in every scene
-        for i in range(6):
-            shade = gfx.blend(bg, tint, 0.08 + i * 0.015)
-            _rect(c, 0, i * 70, SW, 72, shade)
-        # reference-style dotted tech grid
-        for gx in range(6, SW, 12):
+        scene_start = float(scene.get("start", 0) or 0)
+        env = self._env_at(scene_start + t)
+        self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
+        self._draw_beams(c, t, accent2, highlight)
+        self._draw_city(c, t, scene_index, tint, accent, accent2, highlight, bg)
+        # dotted tech grid, slowly scrolling
+        gx_off = int(t * 2) % 12
+        for gx in range(6 - gx_off, SW, 12):
             for gy in range(64, 252, 12):
-                _pixel(c, gx, gy, tint if (gx + gy) % 3 else highlight, 22)
-        _rect(c, 0, 200, SW, 2, gfx.blend(bg, tint, 0.55), 110)
+                _pixel(c, gx, gy, tint if (gx + gy) % 3 else highlight, 18)
+        _rect(c, 0, 200, SW, 2, gfx.blend(bg, tint, 0.55), 90)
         _rect(c, 0, 340, SW, 140, gfx.blend(gfx.blend(bg, tint, 0.08), (0, 0, 0), 0.25))
         _rect(c, 0, 338, SW, 3, accent)
-        # textured studio floor: subtle bands + pixel specks instead of a flat void
-        for i in range(8):
-            y = 346 + i * 17
-            _rect(c, 0, y, SW, 1, gfx.blend(bg, accent, 0.10 + i * 0.012), 95)
-        for i in range(18):
-            x = (i * 37 + 11) % SW
-            y = 348 + (i * 29) % 126
-            _pixel(c, x, y, accent2 if i % 3 else highlight, 70)
-        # slow floating pixels make the dark background feel alive
-        for i in range(12):
-            x = (i * 41 + int(t * 6)) % SW
-            y = (i * 53 + int(t * 2)) % 190
-            _pixel(c, x, y, highlight if i % 3 else accent2, 55)
+        self._draw_floor(c, t, scene_index, tint, accent, accent2, highlight)
         self._draw_backdrop(c, t, scene_index)
+        # cinematic scanlines
         for sy in range(0, SH, 4):
             _rect(c, 0, sy, SW, 1, (0, 0, 0), 8)
 
@@ -749,6 +1073,10 @@ class PixelRenderer:
         elif visual == "chart":
             _rect(c, 52, 70, 168, 172, gfx.blend(card, (0, 0, 0), 0.06))
             _rect(c, 58, 76, 156, 160, gfx.blend(bg, accent, 0.12))
+            _rect(c, 52, 70, 168, 2, accent, 170)
+            _rect(c, 52, 70, 2, 172, accent, 70)
+            _rect(c, 196, 80, 20, 2, muted, 130)
+            _rect(c, 196, 85, 14, 2, accent2, 110)
             for i in range(5):
                 _rect(c, 60, 86 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
             for i in range(14):
@@ -760,13 +1088,23 @@ class PixelRenderer:
             _rect(c, 200, 80, 12, 12, good, 180)
             _rect(c, 216, 84, 22, 3, muted)
         elif visual == "board":
-            _rect(c, 42, 66, 178, 164, (238, 241, 235))
-            _rect(c, 46, 70, 170, 156, (214, 221, 213))
+            _rect(c, 42, 66, 178, 164, (34, 40, 42))
+            _rect(c, 45, 69, 172, 158, (150, 160, 152))
+            _rect(c, 45, 69, 172, 3, accent)
             _rect(c, 56, 84, 80, 5, accent)
+            # sticky notes and marker annotations
+            _rect(c, 172, 78, 32, 28, (255, 208, 86), 230)
+            _rect(c, 178, 84, 20, 2, (60, 50, 30), 180)
+            _rect(c, 178, 90, 15, 2, (60, 50, 30), 160)
+            _rect(c, 154, 120, 40, 26, (255, 136, 116), 215)
+            _rect(c, 160, 127, 26, 2, (80, 40, 36), 170)
+            _rect(c, 92, 150, 18, 2, (220, 70, 70), 200)
+            _rect(c, 90, 146, 2, 8, (220, 70, 70), 200)
             for i in range(4):
                 _rect(c, 56, 102 + i * 22, 6, 6, good if i != 3 else bad)
                 _rect(c, 68, 103 + i * 22, 112 - (i * 8), 3, (40, 52, 48))
                 _rect(c, 68, 109 + i * 22, 70, 2, (100, 112, 105))
+            _rect(c, 46, 70, 1, 156, (120, 130, 122), 140)
         elif visual == "phone":
             _rect(c, 150, 56, 92, 196, gfx.blend(card, (0, 0, 0), 0.04), 255)
             _rect(c, 156, 64, 80, 180, gfx.blend(bg, accent, 0.2))
@@ -828,7 +1166,6 @@ class PixelRenderer:
             anim = auto_animation(scene.get("text", ""), scene.get("kind", ""))
         if anim not in ANIMATIONS:
             anim = "talk" if scene.get("text") else "idle"
-        scene_start = float(scene.get("start", 0) or 0)
         scene_end = float(scene.get("end", scene_start + 1) or scene_start + 1)
         speech_start = max(0.0, float(scene.get("place", scene_start) or scene_start) - scene_start)
         speech_dur = float(scene.get("dur", 0) or 0)
@@ -863,6 +1200,7 @@ class PixelRenderer:
             x += math.sin(t * speed * 0.34) * (2.0 if talking else 1.2)
         bob_speed = 0.82 if talking else 0.55
         bob = math.sin(t * speed * bob_speed) * (3.8 if talking else (3.2 if intensity == "high" else 2.0))
+        bob += env * (2.6 if talking else 0.4)
         # Keep the feet on the same baseline regardless of height/size.
         y = 328 - FRAME_H * scale + bob
         # soft stage light + floor highlight where the character stands
@@ -874,10 +1212,19 @@ class PixelRenderer:
         if self.custom_image is not None:
             _draw_image_sprite(c, self.custom_image, x, y, char_w, FRAME_H * scale, self.nearest)
         else:
+            # mirrored floor reflection
+            c.save()
+            c.clipRect(skia.Rect.MakeXYWH(x - 4, y + FRAME_H * scale - 2, char_w + 8, 62))
+            c.translate(0, y + FRAME_H * scale * 2 - 2)
+            c.scale(1, -1)
+            _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale, 42)
+            c.restore()
             _draw_sprite(c, self.sheet, x, y, frame, self.nearest, scale)
-        if talking and self.custom_image is None:
-            _draw_talk_overlay(c, x, y, scale, self.character, t)
+            self._draw_face_overlay(c, x, y, scale, self.character, t, anim, env, scene_index)
+            if talking:
+                self._draw_voice_bars(c, x, y, char_w, scale, t, env)
         self._draw_character_fx(c, scene, t, x, y, char_w, scale, anim)
+        self._draw_foreground(c, t, scene_index, anim, env, accent, accent2, highlight)
 
     def _frame(self, anim: str, t: float) -> int:
         frames = {
@@ -890,7 +1237,7 @@ class PixelRenderer:
         return frames[int(t * 3) % len(frames)]
 
     # ---------------------------------------------------------------- text
-    def _draw_title(self, c, scene, t):
+    def _draw_title(self, c, scene, t, scene_index=0):
         kind = scene.get("kind", "statement")
         title = str(scene.get("title") or "").strip()
         accent = str(scene.get("accent") or "").strip()
@@ -920,6 +1267,13 @@ class PixelRenderer:
         _rect(c, 36, 180, 4, plate_h, accent_rgb, int(210 * a_plate))
         _rect(c, 36, 180 + plate_h - 2, plate_w, 2, gfx.blend(accent_rgb, (0, 0, 0), 0.35),
               int(120 * a_plate))
+        for sy in range(180, 180 + plate_h, 4):
+            _rect(c, 36, sy, plate_w, 1, (255, 255, 255), 4)
+        # index badge
+        gfx.rrect(c, 36, 136, 54, 30, 6, fill=(6, 10, 14),
+                  alpha=int(220 * a_plate), stroke=accent_rgb, sw=1.0)
+        gfx.draw_text(c, f"{scene_index + 1:02d}", 63, 158, "mono", 16, accent_rgb,
+                      int(240 * a_plate), "center", tracking=1.0)
         if kicker:
             gfx.draw_text(c, kicker.upper(), 52, 196, "mono", 15, accent_rgb,
                           int(230 * a_kick), tracking=2.0)
@@ -929,7 +1283,8 @@ class PixelRenderer:
             gfx.draw_text(c, line, 52, yy, title_font, size, (0, 0, 0),
                           int(150 * a_title), tracking=-1.0)
             gfx.draw_text(c, line, 49, yy - 3, title_font, size, text_rgb,
-                          int(255 * a_title), tracking=-1.0)
+                          int(255 * a_title), tracking=-1.0,
+                          glow=accent_rgb, glow_a=64, glow_w=18)
             y += int(size * 1.06)
         if accent_lines:
             y += 8
@@ -945,17 +1300,26 @@ class PixelRenderer:
 
     def _draw_hud(self, c, scene_index, t):
         # top bar
+        _rect(c, 0, 0, config.W, 4, tuple(gfx.ACCENT), 80)
         gfx.draw_text(c, str(self.settings.get("brand", "TRADE AUTOPSY")).upper(),
                       52, 82, "mono", 19, tuple(gfx.TEXT), 220, tracking=2.4)
         gfx.draw_text(c, f"{scene_index + 1:02d}/{len(self.starts):02d}",
                       config.W - 52, 82, "mono", 17, tuple(gfx.MUTED), 180,
                       "right", tracking=1.4)
-        # progress
+        n = len(self.starts)
+        for i in range(n):
+            x = config.W - 52 - (n - 1 - i) * 20
+            active = i <= scene_index
+            _rect(c, x, 106, 10, 4,
+                  tuple(gfx.ACCENT) if active else (80, 90, 105),
+                  190 if active else 90)
+        # progress (global timeline, not the local scene time)
         x0, x1, y = 52, config.W - 52, 1848
+        global_t = float(self.starts[scene_index]) + t if scene_index < n else t
         p = skia.Paint(AntiAlias=True)
         p.setColor(gfx.col((80, 90, 105), 90))
         c.drawRect(skia.Rect.MakeXYWH(x0, y, x1 - x0, 3), p)
-        prog = max(0.0, min(1.0, t / max(0.01, self.duration)))
+        prog = max(0.0, min(1.0, global_t / max(0.01, self.duration)))
         q = skia.Paint(AntiAlias=True)
         q.setColor(gfx.col(tuple(gfx.ACCENT), 220))
         c.drawRect(skia.Rect.MakeXYWH(x0, y, (x1 - x0) * prog, 3), q)
@@ -974,31 +1338,91 @@ class PixelRenderer:
         full = self.full.getCanvas()
         full.resetMatrix()
         full.clear(gfx.col((8, 8, 11)))
+        scene_start = float(scene.get("start", 0) or 0)
+        duration = max(0.5, float(scene.get("end", scene_start + 1) or scene_start + 1) - scene_start)
+        kind = str(scene.get("kind") or "")
+        anim = scene.get("pixel_animation") or "auto"
+        if anim == "auto":
+            anim = auto_animation(scene.get("text", ""), kind)
+        # cinematic push-in + parallax drift + impact shake
+        intro = gfx.ease_out(min(1.0, t / max(0.6, min(2.2, duration * 0.35))))
+        zoom = 1.0 + (0.055 if kind in ("hook", "cta") else 0.032) * intro
+        zoom += 0.012 * math.sin(t * 0.35 + scene_index)
+        shake_x = shake_y = 0.0
+        if anim in ("error", "scared"):
+            shake_x = math.sin(t * 55) * 1.6
+            shake_y = math.cos(t * 47) * 1.2
+        src_w = SW / zoom
+        src_h = SH / zoom
+        cx = SW / 2 + math.sin(t * 0.27 + scene_index * 1.3) * 1.6 + shake_x
+        cy = SH * 0.53 + shake_y
+        x0 = max(0.0, min(SW - src_w, cx - src_w / 2))
+        y0 = max(0.0, min(SH - src_h, cy - src_h / 2))
         full.drawImageRect(
             self.low.makeImageSnapshot(),
-            skia.Rect.MakeWH(SW, SH),
+            skia.Rect.MakeXYWH(x0, y0, src_w, src_h),
             skia.Rect.MakeWH(self.out_w, self.out_h),
             self.nearest,
             None,
         )
+        if self.vignette is not None:
+            full.drawImageRect(
+                self.vignette,
+                skia.Rect.MakeWH(config.W, config.H),
+                skia.Rect.MakeWH(self.out_w, self.out_h),
+                self.linear,
+                None,
+            )
         if self.text_scale != 1.0:
             full.save()
             full.scale(self.text_scale, self.text_scale)
         try:
-            self._draw_title(full, scene, t)
+            self._draw_title(full, scene, t, scene_index)
+        except Exception:
+            pass
+        try:
+            self._draw_cards(full, scene, t)
         except Exception:
             pass
         try:
             self._draw_captions(full, scene, t)
         except Exception:
             pass
-        self._draw_hud(full, scene_index, t)
+        try:
+            self._draw_hud(full, scene_index, t)
+            self._draw_ticker(full, scene_start + t)
+            self._draw_disclaimer(full)
+        except Exception:
+            pass
         if self.text_scale != 1.0:
             full.restore()
-        # short fade avoids a hard black cut between pixel scenes
-        if t < 0.20:
-            _rect(full, 0, 0, self.out_w, self.out_h, (0, 0, 0),
-                  int(210 * (1 - t / 0.20)))
+        # light wipe + flash at the scene start
+        if t < 0.34:
+            k = t / 0.34
+            _rect(full, 0, 0, self.out_w, self.out_h, (255, 255, 255),
+                  int(18 * (1 - k)))
+            band_w = 130 * (self.out_w / config.W)
+            bx = -band_w + k * (self.out_w + band_w * 2)
+            path = skia.Path()
+            path.moveTo(bx, 0)
+            path.lineTo(bx + band_w, 0)
+            path.lineTo(bx + band_w - 140, self.out_h)
+            path.lineTo(bx - 140, self.out_h)
+            path.close()
+            paint = skia.Paint(AntiAlias=True)
+            paint.setColor(gfx.col(gfx.ACCENT, int(28 * (1 - k))))
+            full.drawPath(path, paint)
+        sweep = (t * 70) % self.out_h
+        _rect(full, 0, sweep, self.out_w, 2, (255, 255, 255), 9)
+        if self.grain:
+            img = self.grain[int(t * 12) % len(self.grain)]
+            full.drawImageRect(
+                img,
+                skia.Rect.MakeWH(540, 960),
+                skia.Rect.MakeWH(self.out_w, self.out_h),
+                self.linear,
+                None,
+            )
         return self.full
 
     def _draw_captions(self, c, scene, local_t):
@@ -1067,10 +1491,14 @@ def _draw_talk_overlay(c, x, y, scale: float, ch: dict, t: float):
         _rect(c, ex + i * step, ey - h, w, h, accent, 205)
 
 
-def _draw_sprite(c, sheet, x, y, frame: int, sampling, scale: float = 1.0):
+def _draw_sprite(c, sheet, x, y, frame: int, sampling, scale: float = 1.0, alpha: int = 255):
     src = skia.Rect.MakeXYWH(frame * FRAME_W, 0, FRAME_W, FRAME_H)
     dst = skia.Rect.MakeXYWH(float(x), float(y), FRAME_W * scale, FRAME_H * scale)
-    c.drawImageRect(sheet, src, dst, sampling, None)
+    paint = None
+    if alpha < 255:
+        paint = skia.Paint()
+        paint.setAlphaf(max(0.0, min(1.0, alpha / 255.0)))
+    c.drawImageRect(sheet, src, dst, sampling, paint)
 
 
 def _draw_image_sprite(c, image, x, y, max_w: float, max_h: float, sampling):
@@ -1159,6 +1587,7 @@ def render_pixel_video(plan: dict, settings: dict, out_path: Path, audio_path: P
         raise RuntimeError("Нет сцен для пиксельного рендера")
     fast = settings.get("quality") == "fast"
     renderer = PixelRenderer(plan, settings, workdir)
+    renderer.set_audio(audio_path)
     workdir.mkdir(parents=True, exist_ok=True)
     clips: list[Path] = []
     reuse = reuse_clips or {}
