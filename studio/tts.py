@@ -2,7 +2,6 @@
 
 Providers
 ---------
-edge        free Microsoft Edge voices, natural Russian, word boundaries
 kokoro      free local Kokoro RU neural voices (ONNX, CPU, no key)
 piper       fully offline Piper voices from _work/piper
 elevenlabs  optional paid provider, requires the user's own API key
@@ -12,7 +11,6 @@ does not expose word boundaries we estimate them from the audio duration.
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import math
@@ -22,7 +20,6 @@ import urllib.request
 import wave
 from pathlib import Path
 
-import edge_tts
 import numpy as np
 
 from . import config
@@ -78,58 +75,6 @@ def trim_silence(x: np.ndarray, threshold: float = 0.004) -> tuple[np.ndarray, i
     return x[start:end], start
 
 
-# ---------------------------------------------------------------- edge
-async def _edge_synth(text: str, voice: str, rate: int, pitch: int,
-                      retries: int = 10) -> tuple[bytes, list]:
-    last = None
-    for attempt in range(retries):
-        try:
-            com = edge_tts.Communicate(
-                text,
-                voice,
-                rate=f"{rate:+d}%",
-                pitch=f"{pitch:+d}Hz",
-                boundary="WordBoundary",
-            )
-            audio = bytearray()
-            words: list[dict] = []
-            async for chunk in com.stream():
-                if chunk["type"] == "audio":
-                    audio += chunk["data"]
-                elif chunk["type"] == "WordBoundary":
-                    words.append({
-                        "w": chunk["text"],
-                        "t": chunk["offset"] / 1e7,
-                        "d": chunk["duration"] / 1e7,
-                    })
-            if len(audio) < 2500:
-                raise RuntimeError(f"слишком короткое аудио ({len(audio)} байт)")
-            return bytes(audio), words
-        except Exception as exc:  # network hiccups are common
-            last = exc
-            await asyncio.sleep(1.0 + attempt * 1.0)
-    raise RuntimeError(
-        f"Edge TTS не ответил после {retries} попыток: {type(last).__name__}: {last}. "
-        "Проверь интернет или выбери локальный голос Piper."
-    )
-
-
-def synth_edge(text: str, voice: str, rate: int, pitch: int, key: str) -> dict:
-    data, words = asyncio.run(_edge_synth(text, voice, rate, pitch))
-    mp3 = TTS_CACHE / f"{key}.mp3"
-    wav = TTS_CACHE / f"{key}.wav"
-    raw = TTS_CACHE / f"{key}_raw.wav"
-    mp3.write_bytes(data)
-    to_wav(mp3, raw)
-    x, _ = read_wav(raw)
-    x, lead = trim_silence(x)
-    write_wav(wav, x)
-    for w in words:
-        w["t"] = max(0.0, w["t"] - lead / config.SR)
-    return {"wav": str(wav), "words": words, "dur": len(x) / config.SR,
-            "provider": "edge"}
-
-
 # ---------------------------------------------------------------- kokoro
 def synth_kokoro(text: str, voice: str, rate: int, key: str) -> dict:
     """Free local Russian neural voice (Kokoro RU, ONNX Runtime)."""
@@ -159,7 +104,7 @@ def _piper_model(voice_id: str) -> Path | None:
 def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
     if not config.ensure_piper():
         raise RuntimeError(
-            "Piper не найден. Проверь папку _work/piper или выбери Edge TTS."
+            "Piper не найден. Проверь папку _work/piper."
         )
     model = _piper_model(voice)
     if not model:
@@ -254,7 +199,7 @@ def estimate_words(text: str, dur: float) -> list[dict]:
 # ---------------------------------------------------------------- cache / dispatch
 def _cache_key(text: str, settings: dict) -> str:
     raw = "|".join([
-        settings.get("provider", "edge"),
+        settings.get("provider", "piper"),
         settings.get("voice", ""),
         str(settings.get("rate", 0)),
         str(settings.get("pitch", 0)),
@@ -265,10 +210,9 @@ def _cache_key(text: str, settings: dict) -> str:
 
 
 def synth_once(text: str, settings: dict, force: bool = False) -> dict:
-    provider = settings.get("provider", "edge")
-    voice = settings.get("voice", "ru-RU-DmitryNeural")
+    provider = settings.get("provider", "piper")
+    voice = settings.get("voice", "ru_RU-dmitri-medium")
     rate = int(settings.get("rate", 0))
-    pitch = int(settings.get("pitch", 0))
     key = _cache_key(text, settings)
     wav = TTS_CACHE / f"{key}.wav"
     meta = TTS_CACHE / f"{key}.json"
@@ -281,9 +225,7 @@ def synth_once(text: str, settings: dict, force: bool = False) -> dict:
             return info
         except Exception:
             pass
-    if provider == "edge":
-        info = synth_edge(text, voice, rate, pitch, key)
-    elif provider == "kokoro":
+    if provider == "kokoro":
         info = synth_kokoro(text, voice, rate, key)
     elif provider == "piper":
         info = synth_piper(text, voice, rate, key)
@@ -345,7 +287,7 @@ def align_words(text: str, words: list[dict]) -> list[dict]:
             j = match + 1
         if dash and out and not out[-1]["display"].rstrip().endswith("—"):
             out[-1]["display"] = out[-1]["display"] + " —"
-        # Edge sometimes voices "P&L" as three tokens: P, &, L. The ampersand
+        # TTS sometimes voices "P&L" as three tokens: P, &, L. The ampersand
         # is not a word and must not reach the subtitle line.
         if display.strip() in ("&", "and") and out and out[-1]["display"].upper().endswith("P&L"):
             continue
@@ -490,7 +432,7 @@ def build_timeline(plan: dict, settings: dict, progress=None, cancel=None,
         spoken = speech_text(scene["text"])
         tts_words = info.get("words", [])
         if spoken != scene["text"] or _needs_fallback(scene["text"], tts_words):
-            # Edge occasionally merges numbers ("4 884") or drops words from
+            # TTS occasionally merges numbers ("4 884") or drops words from
             # the boundary stream. The original text must win in the captions.
             aligned = align_words(scene["text"], estimate_words(scene["text"], dur))
         else:

@@ -56,27 +56,14 @@ def main(payload_path: str) -> None:
     scene_index = data.get("scene_index")
     base_job_id = data.get("base_job_id")
     base_scene_count = data.get("base_scene_count")
-    # Prefer Microsoft Edge neural voices. They are free and much more natural
-    # than Piper. If Microsoft is unreachable from the runner, fall back to the
-    # bundled CC0 Piper voices automatically.
-    edge_allowed = {
-        "ru-RU-DmitryNeural", "ru-RU-SvetlanaNeural",
-        "en-US-EmmaMultilingualNeural", "en-US-AndrewMultilingualNeural",
-        "en-US-AvaMultilingualNeural",
-    }
     piper_allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
-    provider = str(settings.get("provider") or "edge")
-    if provider not in ("edge", "piper"):
-        provider = "edge"
     voice = str(settings.get("voice") or "")
     quality = str(settings.get("quality") or "quality")
     if quality not in ("fast", "quality", "ultra"):
         quality = "quality"
-    if provider == "edge":
-        voice = voice if voice in edge_allowed else "ru-RU-SvetlanaNeural"
-    else:
-        voice = voice if voice in piper_allowed else "ru_RU-dmitri-medium"
-    settings.update(provider=provider, voice=voice, pitch=0, quality=quality, auto_rate=True)
+    if voice not in piper_allowed:
+        voice = "ru_RU-dmitri-medium"
+    settings.update(provider="piper", voice=voice, pitch=0, quality=quality, auto_rate=True)
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
     project_id = f"gh_{job_id}"
@@ -99,21 +86,9 @@ def main(payload_path: str) -> None:
             reuse_clips=reuse,
         )
 
-    provider_used = settings["provider"]
+    provider_used = "piper"
     voice_used = settings["voice"]
-    try:
-        info = run_render()
-    except Exception as exc:
-        if settings["provider"] != "edge":
-            raise
-        print("EDGE_TTS_FALLBACK", type(exc).__name__, str(exc)[:300], flush=True)
-        settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0)
-        provider_used = "piper"
-        voice_used = "ru_RU-dmitri-medium"
-        # Piper changes the audio length, so pre-rendered clips from an Edge
-        # attempt cannot be reused: rebuild the whole video to keep A/V sync.
-        reuse = None
-        info = run_render()
+    info = run_render()
     out = Path("out")
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(info["video"], out / "video.mp4")

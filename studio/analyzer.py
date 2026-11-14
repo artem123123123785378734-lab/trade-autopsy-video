@@ -112,7 +112,7 @@ def speech_text(text: str) -> str:
 
 
 def estimate_seconds(text: str, rate: int = 0) -> float:
-    """Rough Russian speech duration at a given Edge TTS rate."""
+    """Rough Russian speech duration at a given TTS rate."""
     chars = len(re.sub(r"\s+", " ", text).strip())
     if not chars:
         return 0.0

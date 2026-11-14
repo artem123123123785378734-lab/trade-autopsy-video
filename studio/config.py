@@ -2,7 +2,7 @@
 
 Everything is local and free by default:
   * Skia for graphics (no browser, no GPU)
-  * Edge TTS for the voice (free, needs internet) or Piper (fully offline)
+  * Piper TTS for the voice (fully offline, CC0 voices)
   * numpy for the soundtrack
   * FFmpeg for encoding
 """
@@ -167,44 +167,6 @@ STYLES: dict[str, dict] = {
 }
 
 # ---------------------------------------------------------------- voices
-EDGE_VOICES = [
-    {
-        "id": "ru-RU-DmitryNeural",
-        "name": "Дмитрий",
-        "desc": "Молодой мужской · энергичный",
-        "provider": "edge",
-        "gender": "male",
-    },
-    {
-        "id": "ru-RU-SvetlanaNeural",
-        "name": "Светлана",
-        "desc": "Женский · спокойный",
-        "provider": "edge",
-        "gender": "female",
-    },
-    {
-        "id": "en-US-EmmaMultilingualNeural",
-        "name": "Эмма",
-        "desc": "Женский · мультиязычный · спокойный темп",
-        "provider": "edge",
-        "gender": "female",
-    },
-    {
-        "id": "en-US-AndrewMultilingualNeural",
-        "name": "Эндрю",
-        "desc": "Мужской · мультиязычный · энергичный",
-        "provider": "edge",
-        "gender": "male",
-    },
-    {
-        "id": "en-US-AvaMultilingualNeural",
-        "name": "Ава",
-        "desc": "Женский · мультиязычный · медленный темп",
-        "provider": "edge",
-        "gender": "female",
-    },
-]
-
 PIPER_VOICES = [
     {
         "id": "ru_RU-dmitri-medium",
@@ -225,13 +187,6 @@ PIPER_VOICES = [
 ]
 
 PROVIDERS = [
-    {
-        "id": "edge",
-        "name": "Edge TTS",
-        "free": True,
-        "needs_key": False,
-        "note": "Бесплатно, естественные русские голоса. Нужен интернет.",
-    },
     {
         "id": "piper",
         "name": "Piper (локально)",
@@ -267,7 +222,7 @@ DEFAULT_SETTINGS: dict = {
     "voice": "ru_RU-dmitri-medium",
     "rate": 0,
     "auto_rate": True,
-    "pitch": -1,
+    "pitch": 0,
     "music": True,
     "music_preset": "tech",
     "music_gain": 0.22,

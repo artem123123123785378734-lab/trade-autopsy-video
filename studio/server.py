@@ -85,15 +85,10 @@ def sanitize_settings(raw: dict | None) -> dict:
             s[k] = raw[k]
     # provider / voice
     if PUBLIC_MODE and s.get("provider") == "elevenlabs":
-        s["provider"] = "edge"
+        s["provider"] = "piper"
     if s.get("provider") not in {p["id"] for p in config.PROVIDERS}:
-        s["provider"] = "edge"
-    valid_voices = {v["id"]: v for v in config.EDGE_VOICES + config.PIPER_VOICES}
-    if s.get("provider") == "edge":
-        if s.get("voice") not in {v["id"] for v in config.EDGE_VOICES}:
-            s["voice"] = config.EDGE_VOICES[0]["id"]
-        s["pitch"] = int(max(-20, min(20, int(s.get("pitch", 0) or 0))))
-    elif s.get("provider") == "piper":
+        s["provider"] = "piper"
+    if s.get("provider") == "piper":
         if s.get("voice") not in {v["id"] for v in config.PIPER_VOICES}:
             s["voice"] = config.PIPER_VOICES[0]["id"]
         s["pitch"] = 0
@@ -204,46 +199,17 @@ def _run_job(job_id: str, pid: str, title: str, script: str, settings: dict,
         job["started"] = _now()
     storage.update_render(render_id, status="running", stage="Старт", progress=1)
 
-    used_fallback = False
     try:
-        try:
-            info = pipeline.generate(
-                project_id=pid,
-                title=title,
-                script=script,
-                settings=settings,
-                render_id=render_id,
-                progress=progress,
-                cancel=lambda: job["cancel_event"].is_set(),
-                force_tts=force_tts,
-            )
-        except Exception as exc:
-            # Edge sometimes returns "No audio" for minutes. A local Piper
-            # voice is a better outcome than a failed render.
-            can_fallback = (
-                settings.get("provider") == "edge"
-                and "Edge TTS" in str(exc)
-                and config.ensure_piper()
-                and not job["cancel_event"].is_set()
-            )
-            if not can_fallback:
-                raise
-            used_fallback = True
-            with JOBS_LOCK:
-                job["stage"] = "Edge недоступен — перехожу на локальный Piper"
-                job["message"] = job["stage"]
-            fallback = dict(settings)
-            fallback.update(provider="piper", voice="ru_RU-denis-medium", pitch=0)
-            info = pipeline.generate(
-                project_id=pid,
-                title=title,
-                script=script,
-                settings=fallback,
-                render_id=render_id,
-                progress=progress,
-                cancel=lambda: job["cancel_event"].is_set(),
-                force_tts=force_tts,
-            )
+        info = pipeline.generate(
+            project_id=pid,
+            title=title,
+            script=script,
+            settings=settings,
+            render_id=render_id,
+            progress=progress,
+            cancel=lambda: job["cancel_event"].is_set(),
+            force_tts=force_tts,
+        )
         rel_video = Path(info["video"]).relative_to(config.DATA).as_posix()
         rel_srt = Path(info["srt"]).relative_to(config.DATA).as_posix()
         rel_poster = None
@@ -264,8 +230,6 @@ def _run_job(job_id: str, pid: str, title: str, script: str, settings: dict,
             "video_url": f"/media/{rel_video}",
             "srt_url": f"/media/{rel_srt}",
             "poster_url": f"/media/{rel_poster}" if rel_poster else None,
-            "warning": ("Edge TTS был недоступен — озвучил локальным Piper"
-                        if used_fallback else None),
         }
         with JOBS_LOCK:
             job["status"] = "done"
@@ -322,7 +286,6 @@ def create_app() -> Flask:
                 config.FONTS / "JetBrainsMono-Medium.ttf",
             ]),
             "piper": config.PIPER_EXE.exists(),
-            "edge": True,
             "cpus": os.cpu_count() or 1,
         })
 
@@ -333,9 +296,7 @@ def create_app() -> Flask:
         piper_ok = config.PIPER_EXE.exists() and any(
             (config.PIPER_DIR / v["model"]).exists() for v in config.PIPER_VOICES
         )
-        voices = list(config.EDGE_VOICES)
-        if piper_ok:
-            voices += config.PIPER_VOICES
+        voices = list(config.PIPER_VOICES) if piper_ok else []
         providers = [p for p in config.PROVIDERS
                      if not (PUBLIC_MODE and (
                          p["id"] == "elevenlabs" or (p["id"] == "piper" and not piper_ok)
@@ -466,7 +427,7 @@ def create_app() -> Flask:
             return jsonify({"error": f"Слишком длинный сценарий. Максимум {MAX_SCRIPT} символов."}), 400
         s = sanitize_settings(body.get("settings", p["settings"]))
         if s["provider"] == "piper" and not config.PIPER_EXE.exists():
-            return jsonify({"error": "Piper не найден. Выбери Edge TTS или проверь _work/piper."}), 400
+            return jsonify({"error": "Piper не найден. Проверь _work/piper."}), 400
         if s["provider"] == "elevenlabs":
             keys = load_keys()
             if not keys.get("eleven_key"):
