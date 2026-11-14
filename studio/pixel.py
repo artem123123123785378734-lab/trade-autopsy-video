@@ -1162,13 +1162,14 @@ class PixelRenderer:
                 y = (i * 43 + int(t * 35)) % 300
                 _rect(c, x, y, 2, 2, (accent, accent2, highlight)[i % 3], 80)
 
-    def _draw_face_overlay(self, c, x, y, scale, ch, t, anim, env, scene_index):
+    def _draw_face_overlay(self, c, x, y, scale, ch, t, anim, env, scene_index, yaw=0.0):
         if ch.get("type") not in ("human", "fantasy"):
             return
         s = scale
         head_x = 12.0
         eye_y = 11.0
-        eye1, eye2 = head_x + 3, head_x + 11
+        shift = int(round(yaw * 1.5))
+        eye1, eye2 = head_x + 3 + shift, head_x + 11 + shift
         phase = (t + scene_index * 0.7) % 4.4
         blink = phase < 0.13
         if blink:
@@ -1196,7 +1197,7 @@ class PixelRenderer:
         elif anim in ("think", "sad"):
             _rect(c, x + eye1 * s, y + (brow_y + 1) * s, 3 * s, 1 * s, brow, 200)
             _rect(c, x + (eye2 - 1) * s, y + brow_y * s, 3 * s, 1 * s, brow, 200)
-        mouth_x = head_x + 6
+        mouth_x = head_x + 6 + shift
         mouth_y = 16.0
         dark = (18, 22, 28)
         if anim in ("victory", "happy") or ch.get("expression") == "smile":
@@ -1222,11 +1223,11 @@ class PixelRenderer:
         if anim in ("scared", "error"):
             _rect(c, x + (head_x + 14) * s, y + 9 * s, 1 * s, 2 * s, (120, 220, 255), 170)
         if ch.get("accessory") == "glasses":
-            gx = head_x + 3 + int((math.sin(t * 2.4) + 1) * 1.5)
+            gx = head_x + 3 + shift + int((math.sin(t * 2.4) + 1) * 1.5)
             _pixel(c, x + gx * s, y + 11 * s, (255, 255, 255), 150)
         hair = ch.get("hair")
         if hair:
-            sway = int(round(math.sin(t * 2.2 + scene_index) * 1.2))
+            sway = int(round(math.sin(t * 2.2 + scene_index) * 1.2 + yaw * 1.5))
             _rect(c, x + (head_x - 2) * s + sway, y + 7 * s, 1 * s, 4 * s, hair, 190)
             _rect(c, x + (head_x + 15) * s + sway, y + 8 * s, 1 * s, 3 * s, hair, 170)
 
@@ -2355,10 +2356,12 @@ class PixelRenderer:
                 c.drawImageRect(self.sheet, src_body, dst_body, self.nearest, rim)
             except Exception:
                 rim = None
-            tail_sway = math.sin(t * 2.2 + scene_index) * 1.2
-            _rect(c, x + body_dx + 10 * scale + tail_sway, y + 37 * scale,
-                  4 * scale, 7 * scale,
-                  gfx.blend(self.character["shirt"], (0, 0, 0), 0.55), 210)
+            for i in range(3):
+                lag = math.sin(t * 2.2 + scene_index - i * 0.35) * (1.1 + i * 0.45)
+                _rect(c, x + body_dx + 10 * scale + lag,
+                      y + (37 + i * 2.4) * scale,
+                      (4.0 - i * 0.6) * scale, 2.6 * scale,
+                      gfx.blend(self.character["shirt"], (0, 0, 0), 0.55 - i * 0.06), 205)
             breath = 1.0 + 0.006 * math.sin(t * 2.1)
             waist_x = x + body_dx + 20 * scale
             waist_y = y + 40 * scale
@@ -2369,32 +2372,42 @@ class PixelRenderer:
             _draw_sprite_part(c, self.sheet, 0, 21, FRAME_W, FRAME_H - 21,
                               x + body_dx, y + 21 * scale, self.nearest, scale)
             c.restore()
-            _rect(c, x + body_dx + 19 * scale, y + 22 * scale,
-                  1 * scale, 9 * scale, (28, 34, 42), 220)
-            _rect(c, x + body_dx + 19 * scale + tail_sway * 0.5, y + 30 * scale,
-                  2 * scale, 2 * scale, tuple(gfx.ACCENT), 220)
+            lx = x + body_dx + 19 * scale
+            for i in range(3):
+                px = lx + math.sin(t * 2.4 - i * 0.4) * (0.5 + i * 0.35) * scale
+                _rect(c, px, y + (22 + i * 3.2) * scale, 1 * scale, 2 * scale,
+                      (28, 34, 42), 215)
+            _rect(c, lx + math.sin(t * 2.4 - 0.8) * 0.8 * scale,
+                  y + 31.5 * scale, 2 * scale, 2 * scale, tuple(gfx.ACCENT), 225)
             _draw_limbs(c, x + body_dx, y, scale, self.character, anim, t, env, part="arms")
-            # articulated head: tilt, nod and reaction
+            # articulated head: tilt, nod, yaw and reaction
             head_dx = 0.0
             head_dy = 0.0
             tilt = math.sin(t * 0.9) * 0.9
+            yaw = 0.0
             if anim in ("point", "show"):
-                head_dx = 0.7 * scale
+                head_dx = 0.4 * scale
                 tilt = -1.6
+                yaw = 0.55
             elif anim == "think":
-                head_dx = -0.5 * scale
+                head_dx = -0.3 * scale
                 head_dy = 0.4 * scale
                 tilt = 2.6
+                yaw = 0.30
             elif anim in ("error", "scared"):
                 head_dx = math.sin(t * 20) * 0.7 * scale
                 head_dy = -0.4 * scale
                 tilt = math.sin(t * 18) * 1.5
+            elif anim == "walk":
+                yaw = 0.40
             elif anim in ("victory", "happy"):
                 head_dy = -0.4 * scale
                 tilt = -1.5
             elif talking:
                 head_dy = -env * 1.0 * scale
                 tilt = math.sin(t * 2.2) * 0.6
+                yaw = 0.12 * math.sin(t * 0.8)
+            head_yaw_dx = yaw * 1.2 * scale
             neck_x = x + body_dx + 20 * scale
             neck_y = y + 21 * scale
             # solid neck column stays with the torso, the head moves above it
@@ -2405,17 +2418,20 @@ class PixelRenderer:
             c.save()
             c.translate(neck_x, neck_y)
             c.rotate(tilt)
+            c.scale(1.0 - abs(yaw) * 0.10, 1.0)
             c.translate(-neck_x, -neck_y)
             if rim is not None:
                 src_head = skia.Rect.MakeXYWH(0, 0, FRAME_W, 21)
                 dst_head = skia.Rect.MakeXYWH(
-                    x + body_dx + head_dx + 1.2 * scale, y + head_dy - 1.2 * scale,
+                    x + body_dx + head_dx + head_yaw_dx + 1.2 * scale,
+                    y + head_dy - 1.2 * scale,
                     FRAME_W * scale, 21 * scale)
                 c.drawImageRect(self.sheet, src_head, dst_head, self.nearest, rim)
             _draw_sprite_part(c, self.sheet, 0, 0, FRAME_W, 21,
-                              x + body_dx + head_dx, y + head_dy, self.nearest, scale)
-            self._draw_face_overlay(c, x + body_dx + head_dx, y + head_dy, scale,
-                                    self.character, t, anim, env, scene_index)
+                              x + body_dx + head_dx + head_yaw_dx, y + head_dy,
+                              self.nearest, scale)
+            self._draw_face_overlay(c, x + body_dx + head_dx + head_yaw_dx, y + head_dy,
+                                    scale, self.character, t, anim, env, scene_index, yaw)
             c.restore()
             if talking:
                 self._draw_voice_bars(c, x, y, char_w, scale, t, env)
