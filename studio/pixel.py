@@ -1656,6 +1656,166 @@ class PixelRenderer:
             _rect(c, 196, ly - 3, 14, 6, good, 180)
             _rect(c, 197, ly - 2, 5, 1, (10, 14, 10), 180)
 
+    def _draw_chart_panel_v2(self, c, t, chart, accent, accent2, highlight, good, bad, bg, card, muted):
+        _rect(c, 52, 70, 168, 172, gfx.blend(card, (0, 0, 0), 0.06))
+        _rect(c, 58, 76, 156, 160, gfx.blend(bg, accent, 0.12))
+        _rect(c, 52, 70, 168, 2, accent, 170)
+        _rect(c, 52, 70, 2, 172, accent, 70)
+        # HUD corners + live tag
+        for cx, cy, sx, sy in ((54, 72, 1, 1), (218, 72, -1, 1),
+                               (54, 240, 1, -1), (218, 240, -1, -1)):
+            _rect(c, min(cx, cx + 7 * sx), cy, 7, 1, accent, 150)
+            _rect(c, cx, min(cy, cy + 7 * sy), 1, 7, accent, 150)
+        _rect(c, 56, 74, 3, 3, bad, 210)
+        _rect(c, 61, 75, 8, 1, muted, 100)
+        for i in range(5):
+            _rect(c, 60, 88 + i * 28, 152, 1, gfx.blend(muted, bg, 0.55))
+        sx = 60 + int((t * 22) % 150)
+        _rect(c, sx, 78, 1, 156, highlight, 14)
+
+        if chart == "progress":
+            for i in range(5):
+                y = 92 + i * 26
+                grow = gfx.ease_out(gfx.clamp((t - 0.10 - i * 0.07) / 0.4))
+                base = 24 + 104 * (0.30 + 0.12 * i) + int(4 * math.sin(t * 1.4 + i))
+                w = max(2, int(base * grow))
+                _rect(c, 64, y, 132, 10, gfx.blend(bg, muted, 0.35), 210)
+                _rect(c, 64, y, min(132, w), 10, accent if i % 2 else accent2, 225)
+                _rect(c, 64, y, min(132, w), 2, highlight, 200)
+                hx = 64 + min(132, w)
+                _rect(c, hx - 2, y - 2, 2, 14, highlight, 180)
+                _rect(c, 64 + int(132 * 0.8), y - 3, 1, 16, highlight, 60)
+            _rect(c, 64, 226, 90, 2, muted, 120)
+        elif chart == "timer":
+            cx, cy, r = 136, 144, 50
+            progress = 0.15 + 0.75 * gfx.ease_out(gfx.clamp(t / 2.8))
+            for a in range(0, 360, 6):
+                rad = math.radians(a)
+                x = cx + math.cos(rad) * r
+                y = cy + math.sin(rad) * r
+                on = a / 360.0 <= progress
+                _rect(c, x - 2, y - 2, 4, 4,
+                      accent if on else gfx.blend(muted, bg, 0.55), 220 if on else 80)
+            for a in range(0, 360, 30):
+                rad = math.radians(a)
+                _rect(c, cx + math.cos(rad) * (r + 5) - 1, cy + math.sin(rad) * (r + 5) - 1,
+                      2, 2, muted, 100)
+            hx = cx + math.cos(math.radians(progress * 360)) * r
+            hy = cy + math.sin(math.radians(progress * 360)) * r
+            _rect(c, hx - 2, hy - 2, 4, 4, highlight, 240)
+            _rect(c, cx - 16, cy - 4, 32, 8, gfx.blend(card, accent, 0.2), 220)
+            _rect(c, cx - 12, cy - 1, 24, 2, highlight, 200)
+            for i in range(3):
+                sy = 84 - int((t * 12 + i * 9) % 20)
+                _rect(c, cx - 10 + i * 8, sy, 3, 3,
+                      gfx.blend(highlight, bg, 0.4), 90)
+        elif chart == "ecg":
+            pts = []
+            for i in range(56):
+                x = 64 + i * 2.6
+                base = 150
+                u = (i * 0.35 + t * 2.2) % 6.0
+                y = base
+                if 2.5 < u < 2.8:
+                    y = base - 44
+                elif 2.8 <= u < 3.05:
+                    y = base + 22
+                elif 3.05 <= u < 3.3:
+                    y = base - 14
+                pts.append((x, y))
+            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, good, 190)
+            if pts:
+                hx, hy = pts[-1]
+                _rect(c, hx - 2, hy - 2, 4, 4, highlight, 240)
+                _rect(c, hx, 78, 1, 150, good, 22)
+            _rect(c, 64, 220, 144, 1, muted, 80)
+        elif chart == "funnel":
+            for i, w in enumerate((150, 120, 90, 60)):
+                grow = gfx.ease_out(gfx.clamp((t - 0.10 - i * 0.08) / 0.4))
+                ww = max(4, int(w * grow))
+                y = 88 + i * 34
+                _rect(c, 136 - ww // 2, y, ww, 26, accent if i < 2 else accent2, 210)
+                _rect(c, 136 - ww // 2, y, ww, 3, highlight, 180)
+                _rect(c, 136 - ww // 2 + 4, y + 6, max(8, ww - 30), 2, bg, 90)
+        elif chart == "line":
+            pts = []
+            for i in range(14):
+                x = 64 + i * 10
+                y = 190 - i * 6 - (i * 13) % 28 + int(math.sin(t * 0.7 + i) * 4)
+                pts.append((x, y))
+            draw = gfx.ease_out(gfx.clamp((t - 0.10) / 0.9))
+            n = max(2, int(len(pts) * draw))
+            shown = pts[:n]
+            for (x1, y1), (x2, y2) in zip(shown, shown[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 180)
+            for x, y in shown[::3]:
+                _rect(c, x - 1, y - 1, 3, 3, highlight, 200)
+            if shown:
+                hx, hy = shown[-1]
+                _rect(c, hx - 2, hy - 2, 4, 4, highlight, 240)
+                _rect(c, hx, 78, 1, 150, highlight, 22)
+            for x in range(62, 210, 8):
+                _rect(c, x, 120, 4, 1, highlight, 70)
+        elif chart == "bars":
+            for i in range(10):
+                grow = gfx.ease_out(gfx.clamp((t - 0.10 - i * 0.04) / 0.4))
+                x = 64 + i * 13
+                h = max(2.0, (18 + (i * 17) % 60) * grow)
+                _rect(c, x, 220 - h, 9, h, accent if i % 2 else accent2, 210)
+                _rect(c, x, 220 - h, 9, 2, highlight, 180)
+                if i == 9:
+                    _rect(c, x - 1, 220 - h - 3, 11, 1, highlight, 110)
+        else:
+            closes = []
+            built = 0
+            for i in range(12):
+                build = gfx.ease_out(gfx.clamp((t - 0.08 - i * 0.045) / 0.34))
+                if build <= 0.01:
+                    continue
+                built += 1
+                x = 64 + i * 12
+                wobble = math.sin(t * 0.55 + i * 0.7) * 3
+                base_y = 198 - i * 7 - (i * 13) % 24
+                oy = base_y + wobble
+                cy = oy - (8 + (i * 11) % 16)
+                cy_b = oy + (cy - oy) * build
+                hi = min(oy, cy_b) - (5 + (i * 7) % 10) * build
+                lo = max(oy, cy_b) + (4 + (i * 5) % 8) * build
+                color = good if cy < oy else bad
+                _rect(c, x + 3, hi, 1, max(2, lo - hi), color, int(190 * build))
+                _rect(c, x, min(oy, cy_b), 7, max(2, abs(cy_b - oy)), color, int(230 * build))
+                if i == 11:
+                    pulse = 0.5 + 0.5 * math.sin(t * 4.0)
+                    _rect(c, x - 2, hi - 2, 11, max(4, lo - hi) + 4, highlight,
+                          int(25 + 30 * pulse))
+                closes.append((x + 3, cy_b))
+            for (x1, y1), (x2, y2) in zip(closes, closes[1:]):
+                _pixel_line(c, x1, y1, x2, y2, 1, accent2, 150)
+            # target / entry / stop levels
+            for x in range(62, 210, 8):
+                _rect(c, x, 108, 4, 1, highlight, 80)
+                _rect(c, x, 168, 4, 1, accent2, 55)
+                _rect(c, x, 208, 4, 1, bad, 45)
+            _rect(c, 198, 105, 12, 6, highlight, 120)
+            _rect(c, 198, 165, 12, 6, accent2, 100)
+            _rect(c, 198, 205, 12, 6, bad, 90)
+            for i in range(12):
+                grow = gfx.ease_out(gfx.clamp((t - 0.22 - i * 0.04) / 0.4))
+                h = max(1.0, (4 + (i * 7) % 12) * grow)
+                x = 64 + i * 12
+                _rect(c, x, 232 - h, 7, h, accent if i % 3 else accent2, 60)
+            if closes:
+                lx, ly = closes[-1]
+                _rect(c, lx - 1, ly - 1, 3, 3, highlight, 230)
+                for yy in range(int(ly) + 4, 232, 4):
+                    _rect(c, lx, yy, 1, 2, highlight, 55)
+                _rect(c, 196, ly - 3, 14, 6, good, 180)
+                _rect(c, 197, ly - 2, 5, 1, (10, 14, 10), 180)
+                for s in range(3):
+                    _rect(c, lx + math.sin(t * 6 + s) * 4, ly - 6 - s * 3,
+                          1, 1, highlight, 120)
+
     def _draw_cards(self, c, scene, t):
         kind = str(scene.get("kind") or "")
         profile = self.profile
@@ -1996,7 +2156,7 @@ class PixelRenderer:
             _rect(c, 222, 294, 8, 10, good)
             _rect(c, 218, 290, 4, 7, gfx.blend(good, (255, 255, 255), 0.15))
         elif visual == "chart":
-            self._draw_chart_panel(c, t, str(self.profile.get("chart", "candles")),
+            self._draw_chart_panel_v2(c, t, str(self.profile.get("chart", "candles")),
                                    accent, accent2, highlight, good, bad, bg, card, muted)
         elif visual == "board":
             _rect(c, 42, 66, 178, 164, (34, 40, 42))
