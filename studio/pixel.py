@@ -895,6 +895,9 @@ class PixelRenderer:
         self.plan = plan
         self.settings = settings
         self.topic = detect_topic(plan)
+        forced_topic = str(settings.get("pixel_topic") or "auto")
+        if forced_topic in TOPIC_PROFILES:
+            self.topic = forced_topic
         self.profile = TOPIC_PROFILES.get(self.topic, TOPIC_PROFILES["story"])
         self.workdir = workdir
         gfx.set_theme(settings.get("style", "tech_blue"))
@@ -2082,13 +2085,15 @@ class PixelRenderer:
 
     def _draw_world(self, c, scene, t, scene_index):
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
-        bg_shift = math.sin(t * 0.25 + scene_index * 0.8) * 2.8
-        bg_lift = math.sin(t * 0.19 + scene_index) * 1.6
-        c.save()
-        c.translate(SW / 2, SH / 2)
-        c.scale(1.035, 1.035)
-        c.translate(-SW / 2, -SH / 2)
-        c.translate(bg_shift, bg_lift)
+        parallax = bool(self.settings.get("pixel_parallax", True))
+        if parallax:
+            bg_shift = math.sin(t * 0.25 + scene_index * 0.8) * 2.8
+            bg_lift = math.sin(t * 0.19 + scene_index) * 1.6
+            c.save()
+            c.translate(SW / 2, SH / 2)
+            c.scale(1.035, 1.035)
+            c.translate(-SW / 2, -SH / 2)
+            c.translate(bg_shift, bg_lift)
         visual = scene.get("pixel_visual")
         if not visual or visual == "auto":
             visual = self.settings.get("pixel_background") or _default_visual(
@@ -2236,7 +2241,8 @@ class PixelRenderer:
         self._draw_mascot(c, t, mascot_anim, tint)
 
         # character
-        c.restore()
+        if parallax:
+            c.restore()
         character_on = scene.get("character")
         if character_on is False or self.settings.get("pixel_character") is False:
             return
@@ -2356,12 +2362,17 @@ class PixelRenderer:
                 c.drawImageRect(self.sheet, src_body, dst_body, self.nearest, rim)
             except Exception:
                 rim = None
-            for i in range(3):
-                lag = math.sin(t * 2.2 + scene_index - i * 0.35) * (1.1 + i * 0.45)
-                _rect(c, x + body_dx + 10 * scale + lag,
-                      y + (37 + i * 2.4) * scale,
-                      (4.0 - i * 0.6) * scale, 2.6 * scale,
-                      gfx.blend(self.character["shirt"], (0, 0, 0), 0.55 - i * 0.06), 205)
+            if self.settings.get("pixel_cloth", True):
+                for i in range(3):
+                    lag = math.sin(t * 2.2 + scene_index - i * 0.35) * (1.1 + i * 0.45)
+                    _rect(c, x + body_dx + 10 * scale + lag,
+                          y + (37 + i * 2.4) * scale,
+                          (4.0 - i * 0.6) * scale, 2.6 * scale,
+                          gfx.blend(self.character["shirt"], (0, 0, 0), 0.55 - i * 0.06), 205)
+            else:
+                _rect(c, x + body_dx + 10 * scale, y + 37 * scale,
+                      4 * scale, 7 * scale,
+                      gfx.blend(self.character["shirt"], (0, 0, 0), 0.55), 210)
             breath = 1.0 + 0.006 * math.sin(t * 2.1)
             waist_x = x + body_dx + 20 * scale
             waist_y = y + 40 * scale
@@ -2372,13 +2383,19 @@ class PixelRenderer:
             _draw_sprite_part(c, self.sheet, 0, 21, FRAME_W, FRAME_H - 21,
                               x + body_dx, y + 21 * scale, self.nearest, scale)
             c.restore()
-            lx = x + body_dx + 19 * scale
-            for i in range(3):
-                px = lx + math.sin(t * 2.4 - i * 0.4) * (0.5 + i * 0.35) * scale
-                _rect(c, px, y + (22 + i * 3.2) * scale, 1 * scale, 2 * scale,
-                      (28, 34, 42), 215)
-            _rect(c, lx + math.sin(t * 2.4 - 0.8) * 0.8 * scale,
-                  y + 31.5 * scale, 2 * scale, 2 * scale, tuple(gfx.ACCENT), 225)
+            if self.settings.get("pixel_cloth", True):
+                lx = x + body_dx + 19 * scale
+                for i in range(3):
+                    px = lx + math.sin(t * 2.4 - i * 0.4) * (0.5 + i * 0.35) * scale
+                    _rect(c, px, y + (22 + i * 3.2) * scale, 1 * scale, 2 * scale,
+                          (28, 34, 42), 215)
+                _rect(c, lx + math.sin(t * 2.4 - 0.8) * 0.8 * scale,
+                      y + 31.5 * scale, 2 * scale, 2 * scale, tuple(gfx.ACCENT), 225)
+            else:
+                _rect(c, x + body_dx + 19 * scale, y + 22 * scale,
+                      1 * scale, 9 * scale, (28, 34, 42), 220)
+                _rect(c, x + body_dx + 19 * scale, y + 30 * scale,
+                      2 * scale, 2 * scale, tuple(gfx.ACCENT), 225)
             _draw_limbs(c, x + body_dx, y, scale, self.character, anim, t, env, part="arms")
             # articulated head: tilt, nod, yaw and reaction
             head_dx = 0.0
@@ -2631,7 +2648,7 @@ class PixelRenderer:
                     blur,
                 )
                 full.restore()
-        if self.quality != "fast":
+        if self.quality != "fast" and self.settings.get("pixel_bloom", True):
             try:
                 bloom = skia.Paint()
                 bloom.setAlphaf(0.22)
