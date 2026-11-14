@@ -56,17 +56,30 @@ def main(payload_path: str) -> None:
     scene_index = data.get("scene_index")
     base_job_id = data.get("base_job_id")
     base_scene_count = data.get("base_scene_count")
+    tts_proxy = data.get("tts_proxy") if isinstance(data.get("tts_proxy"), dict) else None
     piper_allowed = {
         "ru_RU-dmitri-medium", "ru_RU-denis-medium",
         "ru_RU-sova200-medium", "ru_RU-april420-medium",
     }
+    yandex_allowed = {"alena", "filipp", "ermil", "jane", "omazh", "zahar"}
+    provider = str(settings.get("provider") or "yandex")
+    if provider not in ("piper", "yandex"):
+        provider = "yandex"
     voice = str(settings.get("voice") or "")
     quality = str(settings.get("quality") or "quality")
     if quality not in ("fast", "quality", "ultra"):
         quality = "quality"
-    if voice not in piper_allowed:
-        voice = "ru_RU-dmitri-medium"
-    settings.update(provider="piper", voice=voice, pitch=0, quality=quality, auto_rate=True)
+    if provider == "yandex":
+        voice = voice if voice in yandex_allowed else "alena"
+        if not tts_proxy:
+            provider = "piper"
+            voice = "ru_RU-dmitri-medium"
+    else:
+        voice = voice if voice in piper_allowed else "ru_RU-dmitri-medium"
+    settings.update(
+        provider=provider, voice=voice, pitch=0, quality=quality, auto_rate=True,
+        tts_proxy=tts_proxy if provider == "yandex" else None,
+    )
     settings.pop("eleven_key", None)
     settings.pop("custom_music", None)
     project_id = f"gh_{job_id}"
@@ -89,9 +102,21 @@ def main(payload_path: str) -> None:
             reuse_clips=reuse,
         )
 
-    provider_used = "piper"
+    provider_used = settings["provider"]
     voice_used = settings["voice"]
-    info = run_render()
+    used_fallback = False
+    try:
+        info = run_render()
+    except Exception as exc:
+        if provider_used != "yandex":
+            raise
+        print("YANDEX_TTS_FALLBACK", type(exc).__name__, str(exc)[:300], flush=True)
+        used_fallback = True
+        settings.update(provider="piper", voice="ru_RU-dmitri-medium", pitch=0, tts_proxy=None)
+        provider_used = "piper"
+        voice_used = "ru_RU-dmitri-medium"
+        reuse = None
+        info = run_render()
     out = Path("out")
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(info["video"], out / "video.mp4")
@@ -110,6 +135,7 @@ def main(payload_path: str) -> None:
         "format": info.get("format"),
         "voice": voice_used,
         "provider": provider_used,
+        "warning": ("Yandex TTS недоступен — озвучил Piper" if used_fallback else None),
         "quality": settings.get("quality"),
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }

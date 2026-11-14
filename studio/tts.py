@@ -17,6 +17,7 @@ import math
 import re
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 import wave
 from pathlib import Path
@@ -174,6 +175,48 @@ def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
             "provider": "piper"}
 
 
+# ---------------------------------------------------------------- yandex
+def synth_yandex(text: str, voice: str, rate: int, key: str, proxy: dict) -> dict:
+    """Synthesize through the Cloudflare Worker proxy (the API key stays server-side)."""
+    if not proxy or not proxy.get("url") or not proxy.get("job_id") or not proxy.get("token"):
+        raise RuntimeError("Yandex TTS proxy не настроен.")
+    payload = json.dumps({
+        "job_id": proxy["job_id"],
+        "token": proxy["token"],
+        "text": text,
+        "voice": voice,
+        "rate": rate,
+    }, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        proxy["url"],
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "User-Agent": "trade-autopsy-render/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "ignore")[:300]
+        raise RuntimeError(f"Yandex TTS: {exc.code} {detail}") from exc
+    if len(data) < 1000:
+        raise RuntimeError("Yandex TTS вернул пустое аудио.")
+    mp3 = TTS_CACHE / f"{key}.mp3"
+    wav = TTS_CACHE / f"{key}.wav"
+    raw = TTS_CACHE / f"{key}_raw.wav"
+    mp3.write_bytes(data)
+    to_wav(mp3, raw)
+    x, _ = read_wav(raw)
+    x, _ = trim_silence(x)
+    write_wav(wav, x)
+    dur = len(x) / config.SR
+    return {"wav": str(wav), "words": estimate_words(text, dur), "dur": dur,
+            "provider": "yandex"}
+
+
 # ---------------------------------------------------------------- elevenlabs
 def synth_eleven(text: str, voice: str, rate: int, key: str, api_key: str) -> dict:
     if not api_key:
@@ -262,6 +305,8 @@ def synth_once(text: str, settings: dict, force: bool = False) -> dict:
         info = synth_kokoro(text, voice, rate, key)
     elif provider == "piper":
         info = synth_piper(text, voice, rate, key)
+    elif provider == "yandex":
+        info = synth_yandex(text, voice, rate, key, settings.get("tts_proxy") or {})
     elif provider == "elevenlabs":
         info = synth_eleven(text, voice, rate, key, settings.get("eleven_key", ""))
     else:
