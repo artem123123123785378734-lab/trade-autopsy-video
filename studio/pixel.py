@@ -624,6 +624,7 @@ def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
 
     # body
     _rect(c, ox + body_x - 1, oy + 21, body_w + 2, 22, outline)
+    _rect(c, ox + body_x, oy + 21, body_w, 1, gfx.blend(shirt, (0, 0, 0), 0.45))
     _rect(c, ox + body_x, oy + 22, body_w, 20, shirt)
     _rect(c, ox + body_x, oy + 22, body_w, 3, shirt_light)
     _rect(c, ox + body_x + body_w - 2, oy + 25, 2, 15, shirt_shadow)
@@ -718,20 +719,27 @@ def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
             _rect(c, ox + body_x - 5, oy + 31, 6, 2, (18, 22, 28))
             _rect(c, ox + body_x - 4, oy + 31, 1, 1, accent, 220)
 
-    # head
+    # head — rounded skull, soft jaw, friendly face
     head_x = 12 if not wide else 11
-    head_y = 5
+    head_y = 4
     head_w = 16 if not wide else 18
-    _rect(c, ox + head_x - 1, oy + head_y - 1, head_w + 2, 19, outline)
-    _rect(c, ox + head_x, oy + head_y, head_w, 16, skin)
-    _rect(c, ox + head_x - 1, oy + head_y + 13, head_w + 2, 3, skin)
-    _rect(c, ox + head_x + head_w - 3, oy + head_y + 1, 2, 14, skin_shadow)
+    head_h = 17
+    _rect(c, ox + head_x + 2, oy + head_y - 1, head_w - 4, 1, outline)
+    _rect(c, ox + head_x + 1, oy + head_y, head_w - 2, 1, outline)
+    _rect(c, ox + head_x, oy + head_y + 1, head_w, head_h - 2, outline)
+    _rect(c, ox + head_x + 1, oy + head_y + head_h - 1, head_w - 2, 1, outline)
+    _rect(c, ox + head_x + 2, oy + head_y, head_w - 4, 1, skin)
+    _rect(c, ox + head_x + 1, oy + head_y + 1, head_w - 2, 1, skin)
+    _rect(c, ox + head_x, oy + head_y + 2, head_w, head_h - 4, skin)
+    _rect(c, ox + head_x + 1, oy + head_y + head_h - 2, head_w - 2, 1, skin)
+    _rect(c, ox + head_x + 1, oy + head_y + head_h - 3, head_w - 2, 1, skin_shadow, 100)
+    _rect(c, ox + head_x + head_w - 3, oy + head_y + 1, 2, head_h - 4, skin_shadow, 45)
     # ears and nose
     _rect(c, ox + head_x - 1, oy + head_y + 7, 2, 3, skin_shadow)
     _rect(c, ox + head_x + head_w - 1, oy + head_y + 7, 2, 3, skin_shadow)
     if ctype in ("human", "fantasy"):
-        _rect(c, ox + head_x + 7, oy + head_y + 9, 1, 2, skin_shadow)
-        _rect(c, ox + head_x + 5, oy + head_y + 8, 5, 1, gfx.blend(skin, (0, 0, 0), 0.08))
+        _rect(c, ox + head_x + 7, oy + head_y + 10, 1, 2, skin_shadow)
+        _rect(c, ox + head_x + 5, oy + head_y + 9, 5, 1, gfx.blend(skin, (0, 0, 0), 0.06))
 
     if ctype == "robot":
         _rect(c, ox + 12, oy + 5, 16, 16, skin)
@@ -785,39 +793,46 @@ def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
         # human hair
         hair_style = ch.get("hair_style")
         if hair_style == "cap":
-            _rect(c, ox + 10, oy + 3, 20, 6, accent)
-            _rect(c, ox + 8, oy + 8, 24, 3, accent)
+            _rect(c, ox + 11, oy + 2, 18, 6, accent)
+            _rect(c, ox + 9, oy + 7, 22, 3, accent)
+            _rect(c, ox + 12, oy + 3, 8, 1, gfx.blend(accent, (255, 255, 255), 0.2))
         else:
-            _rect(c, ox + 11, oy + 3, 18, 5, hair)
-            _rect(c, ox + 10, oy + 6, 3, 9 if hair_style != "bob" else 13, hair)
-            _rect(c, ox + 27, oy + 6, 3, 9 if hair_style != "bob" else 13, hair)
+            _rect(c, ox + 12, oy + 2, 16, 4, hair)
+            _rect(c, ox + 11, oy + 5, 3, 9 if hair_style != "bob" else 13, hair)
+            _rect(c, ox + 26, oy + 5, 3, 9 if hair_style != "bob" else 13, hair)
             if hair_style == "long":
                 _rect(c, ox + 10, oy + 12, 3, 10, hair)
                 _rect(c, ox + 27, oy + 12, 3, 10, hair)
-            _rect(c, ox + 12, oy + 4, 7, 1, gfx.blend(hair, (255, 255, 255), 0.24))
-            _rect(c, ox + 13, oy + 4, 1, 6, gfx.blend(hair, (0, 0, 0), 0.25))
-            _rect(c, ox + 24, oy + 5, 1, 5, gfx.blend(hair, (255, 255, 255), 0.12))
-        # eyes / mouth
+            # soft fringe, kept above the eyes
+            _rect(c, ox + 13, oy + 4, 6, 2, hair)
+            _rect(c, ox + 19, oy + 3, 7, 3, hair)
+            _rect(c, ox + 13, oy + 3, 5, 1, gfx.blend(hair, (255, 255, 255), 0.22))
+            _rect(c, ox + 24, oy + 4, 1, 5, gfx.blend(hair, (255, 255, 255), 0.10))
+        # friendly eyebrows, not an angry monobrow
+        brow = gfx.blend(hair, (18, 22, 28), 0.35)
+        _rect(c, ox + 14, oy + 9, 3, 1, brow, 210)
+        _rect(c, ox + 22, oy + 9, 3, 1, brow, 210)
+        # eyes
         if blink:
-            _rect(c, ox + 15, oy + 12, 2, 1, eye)
-            _rect(c, ox + 23, oy + 12, 2, 1, eye)
+            _rect(c, ox + 15, oy + 12, 2, 1, skin_shadow)
+            _rect(c, ox + 23, oy + 12, 2, 1, skin_shadow)
         elif scared or expression == "surprised":
             _rect(c, ox + 14, oy + 10, 4, 4, (250, 250, 255))
             _rect(c, ox + 15, oy + 11, 2, 2, eye)
             _rect(c, ox + 22, oy + 10, 4, 4, (250, 250, 255))
             _rect(c, ox + 23, oy + 11, 2, 2, eye)
         elif sad or expression == "sad":
-            _rect(c, ox + 15, oy + 12, 2, 1, eye)
-            _rect(c, ox + 23, oy + 12, 2, 1, eye)
+            _rect(c, ox + 15, oy + 11, 2, 2, eye)
+            _rect(c, ox + 23, oy + 11, 2, 2, eye)
         elif think or expression == "angry":
-            _rect(c, ox + 15, oy + 10, 2, 2, eye)
-            _rect(c, ox + 23, oy + 10, 2, 2, eye)
+            _rect(c, ox + 15, oy + 11, 2, 2, eye)
+            _rect(c, ox + 23, oy + 11, 2, 2, eye)
         else:
             _rect(c, ox + 15, oy + 11, 2, 2, eye)
             _rect(c, ox + 23, oy + 11, 2, 2, eye)
         if not blink and not (scared or expression == "surprised"):
-            _rect(c, ox + 15, oy + 11, 1, 1, (245, 245, 255))
-            _rect(c, ox + 23, oy + 11, 1, 1, (245, 245, 255))
+            _pixel(c, ox + 15, oy + 11, (255, 255, 255), 240)
+            _pixel(c, ox + 23, oy + 11, (255, 255, 255), 240)
         if gender == "female" and not blink:
             _rect(c, ox + 14, oy + 9, 4, 1, dark)
             _rect(c, ox + 22, oy + 9, 4, 1, dark)
@@ -825,31 +840,38 @@ def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
     # mouth / expression (human and fantasy; robot/animal handled above)
     if ctype in ("human", "fantasy"):
         if talk or scared:
-            _rect(c, ox + 18, oy + 16, 4, 2, dark)
+            _rect(c, ox + 17, oy + 17, 3, 2, dark)
+            _pixel(c, ox + 18, oy + 18, (176, 88, 94), 220)
         elif happy or victory or expression == "smile":
-            _rect(c, ox + 17, oy + 16, 6, 2, dark)
-            _rect(c, ox + 18, oy + 15, 4, 1, dark)
+            _rect(c, ox + 17, oy + 17, 4, 1, dark)
+            _pixel(c, ox + 16, oy + 16, dark, 220)
+            _pixel(c, ox + 21, oy + 16, dark, 220)
+            _pixel(c, ox + 18, oy + 17, (250, 248, 232), 220)
+            _rect(c, ox + 18, oy + 18, 2, 1, gfx.blend(skin, (92, 34, 44), 0.28), 180)
         elif sad or expression == "sad":
-            _rect(c, ox + 18, oy + 17, 4, 1, dark)
-            _rect(c, ox + 19, oy + 16, 2, 1, dark)
+            _rect(c, ox + 17, oy + 18, 4, 1, dark)
+            _pixel(c, ox + 16, oy + 17, dark, 220)
+            _pixel(c, ox + 21, oy + 17, dark, 220)
         elif expression == "surprised":
-            _rect(c, ox + 18, oy + 16, 4, 3, dark)
-            _rect(c, ox + 19, oy + 17, 2, 1, (220, 90, 100))
+            _rect(c, ox + 18, oy + 17, 2, 2, dark)
+            _pixel(c, ox + 18, oy + 18, (220, 90, 100), 220)
         elif expression == "angry":
-            _rect(c, ox + 18, oy + 16, 4, 1, dark)
+            _rect(c, ox + 17, oy + 17, 4, 1, dark)
             _rect(c, ox + 15, oy + 8, 4, 1, dark)
             _rect(c, ox + 23, oy + 8, 4, 1, dark)
         else:
-            _rect(c, ox + 18, oy + 16, 4, 1, dark)
+            _rect(c, ox + 17, oy + 17, 4, 1, dark)
+            _rect(c, ox + 18, oy + 18, 2, 1, gfx.blend(skin, (0, 0, 0), 0.12), 90)
 
     # accessory
     if ctype in ("human", "fantasy"):
         if ch.get("accessory") == "glasses":
-            _rect(c, ox + 14, oy + 10, 5, 4, dark)
-            _rect(c, ox + 15, oy + 11, 3, 2, (200, 220, 235))
-            _rect(c, ox + 22, oy + 10, 5, 4, dark)
-            _rect(c, ox + 23, oy + 11, 3, 2, (200, 220, 235))
-            _rect(c, ox + 19, oy + 11, 3, 1, dark)
+            # thin wireframe glasses that leave the eyes readable
+            _rect(c, ox + 14, oy + 10, 4, 4, dark)
+            _rect(c, ox + 15, oy + 11, 2, 2, (220, 235, 245))
+            _rect(c, ox + 22, oy + 10, 4, 4, dark)
+            _rect(c, ox + 23, oy + 11, 2, 2, (220, 235, 245))
+            _rect(c, ox + 18, oy + 11, 4, 1, dark)
         elif ch.get("accessory") == "headphones":
             _rect(c, ox + 9, oy + 5, 22, 3, dark)
             _rect(c, ox + 7, oy + 8, 4, 9, dark)
@@ -1214,12 +1236,10 @@ class PixelRenderer:
         head_x = 12.0
         eye_y = 11.0
         shift = int(round(yaw * 1.5))
-        # Repaint the lower face so the static sprite mouth/nose cannot show
-        # through the animated lips. This is what removes the "black moustache"
-        # artefact when the character smiles or talks.
-        _rect(c, x + (head_x + 2) * s, y + 13 * s, 12 * s, 5 * s, ch["skin"], 255)
-        _rect(c, x + (head_x + 2) * s, y + 13 * s, 12 * s, 1 * s,
-              gfx.blend(ch["skin"], (255, 255, 255), 0.08), 255)
+        # Repaint only the mouth area, not the whole lower face. The old wide
+        # patch made the character look like a flat mask.
+        _rect(c, x + (head_x + 4) * s, y + 16.2 * s, 8 * s, 2.8 * s,
+              ch["skin"], 255)
         eye1, eye2 = head_x + 3 + shift, head_x + 11 + shift
         phase = (t + scene_index * 0.7) % 4.4
         blink = phase < 0.13
@@ -1237,12 +1257,12 @@ class PixelRenderer:
                 dy = -1
             dx = max(-1, min(1, dx + int(round(math.sin(t * 1.1) * 0.5))))
             for ex in (eye1, eye2):
-                _rect(c, x + ex * s, y + eye_y * s, 3 * s, 2 * s,
-                      (245, 245, 250), 245)
-                _rect(c, x + (ex + 1) * s, y + (eye_y + 0.45) * s,
+                _rect(c, x + ex * s, y + eye_y * s, 2 * s, 2 * s,
+                      (248, 248, 245), 245)
+                _rect(c, x + (ex + 0.5) * s, y + (eye_y + 0.5) * s,
                       1 * s, 1 * s, ch["eye_color"], 255)
-                _pixel(c, x + (ex + 1) * s, y + (eye_y + 0.45) * s,
-                       (245, 245, 255), 210)
+                _pixel(c, x + (ex + 0.5) * s, y + (eye_y + 0.5) * s,
+                       (255, 255, 255), 230)
         brow_y = 8.0 if anim not in ("scared", "surprise") else 7.0
         brow = (18, 22, 28)
         if anim in ("error", "scared", "surprise"):
@@ -1251,19 +1271,20 @@ class PixelRenderer:
         elif anim in ("think", "sad"):
             _rect(c, x + eye1 * s, y + (brow_y + 1) * s, 3 * s, 1 * s, brow, 200)
             _rect(c, x + (eye2 - 1) * s, y + brow_y * s, 3 * s, 1 * s, brow, 200)
-        mouth_x = head_x + 6 + shift
-        mouth_y = 15.8
+        mouth_x = head_x + 5 + shift
+        mouth_y = 17.0
         dark = (18, 22, 28)
         lip = gfx.blend(ch["skin"], (92, 34, 44), 0.30)
         if anim in ("victory", "happy", "thumbs_up") or ch.get("expression") == "smile":
-            # upturned corners, teeth and a lower lip read as a real smile
-            _pixel(c, x + (mouth_x - 1) * s, y + (mouth_y - 0.5) * s, dark, 220)
-            _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, 1 * s, dark, 245)
-            _pixel(c, x + (mouth_x + 3) * s, y + (mouth_y - 0.5) * s, dark, 220)
-            _rect(c, x + (mouth_x + 1) * s, y + mouth_y * s, 1 * s, 1 * s,
-                  (246, 244, 228), 210)
-            _rect(c, x + (mouth_x + 1) * s, y + (mouth_y + 1) * s, 2 * s, 1 * s,
-                  lip, 190)
+            # a compact five-pixel smile with lifted corners and a lower lip
+            _pixel(c, x + (mouth_x - 1) * s, y + (mouth_y - 0.2) * s, dark, 230)
+            _rect(c, x + mouth_x * s, y + (mouth_y + 0.35) * s, 4 * s, 1 * s,
+                  dark, 245)
+            _pixel(c, x + (mouth_x + 4) * s, y + (mouth_y - 0.2) * s, dark, 230)
+            _rect(c, x + (mouth_x + 1) * s, y + (mouth_y + 1.25) * s, 2 * s, 1 * s,
+                  lip, 185)
+            _pixel(c, x + (mouth_x + 1) * s, y + (mouth_y + 0.35) * s,
+                   (250, 248, 232), 220)
         elif anim in ("sad", "facepalm") or ch.get("expression") == "sad":
             _pixel(c, x + (mouth_x - 1) * s, y + (mouth_y + 1) * s, dark, 220)
             _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, 1 * s, dark, 230)
@@ -1291,10 +1312,10 @@ class PixelRenderer:
             _rect(c, x + (mouth_x + 1) * s, y + (mouth_y + 1) * s, 1 * s, 1 * s,
                   lip, 150)
         # nose bridge / nostril and chin shadow add depth without extra sprites
-        _pixel(c, x + (head_x + 7) * s + shift, y + 13 * s,
+        _pixel(c, x + (head_x + 7) * s + shift, y + 13.8 * s,
                gfx.blend(ch["skin"], (255, 255, 255), 0.18), 150)
-        _pixel(c, x + (head_x + 6) * s + shift, y + 14 * s, lip, 110)
-        _rect(c, x + (mouth_x + 1) * s, y + 18 * s, 2 * s, 1 * s,
+        _pixel(c, x + (head_x + 6) * s + shift, y + 14.6 * s, lip, 110)
+        _rect(c, x + (mouth_x + 1) * s, y + 19 * s, 2 * s, 1 * s,
               gfx.blend(ch["skin"], (0, 0, 0), 0.12), 90)
         if anim in ("victory", "happy", "thumbs_up"):
             _rect(c, x + (head_x + 2) * s, y + 14 * s, 2 * s, 1 * s,
