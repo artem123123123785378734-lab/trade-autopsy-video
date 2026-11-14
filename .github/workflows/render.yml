@@ -85,6 +85,12 @@ jobs:
               base = f"https://huggingface.co/rhasspy/piper-voices/resolve/{rev}/ru/ru_RU/{voice}/medium"
               get(f"{base}/ru_RU-{voice}-medium.onnx", f"piper-runtime/ru_RU-{voice}-medium.onnx")
               get(f"{base}/ru_RU-{voice}-medium.onnx.json", f"piper-runtime/ru_RU-{voice}-medium.onnx.json")
+          # Apache-2.0 community voices with female timbres.
+          community_rev = "ba4a8c784ff536f71e4dd48bd6815092fb02cd65"
+          for voice in ("sova200", "april420"):
+              base = f"https://huggingface.co/rraaww/ru_piper/resolve/{community_rev}/ru_RU-{voice}-medium"
+              get(f"{base}.onnx", f"piper-runtime/ru_RU-{voice}-medium.onnx")
+              get(f"{base}.onnx.json", f"piper-runtime/ru_RU-{voice}-medium.onnx.json")
           PY
           tar -xzf /tmp/piper.tgz -C piper-runtime
           chmod +x piper-runtime/piper/piper

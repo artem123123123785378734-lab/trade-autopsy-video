@@ -129,7 +129,7 @@ def _project_payload(p: dict) -> dict:
         "id": p["id"],
         "title": p["title"],
         "script": p["script"],
-        "settings": p["settings"],
+        "settings": sanitize_settings(p["settings"]),
         "created_at": p["created_at"],
         "updated_at": p["updated_at"],
         "renders": p.get("renders", 0),

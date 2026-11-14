@@ -80,15 +80,15 @@ PIPER_EXE = Path(os.environ.get("PIPER_EXE")) if os.environ.get("PIPER_EXE") els
 
 def ensure_piper() -> bool:
     """Copy the optional Piper runtime/models to an ASCII path on first use."""
-    models = ["ru_RU-dmitri-medium.onnx", "ru_RU-denis-medium.onnx"]
-    if PIPER_EXE.exists() and any((PIPER_DIR / m).exists() for m in models):
+    models = [v["model"] for v in PIPER_VOICES]
+    if any((PIPER_DIR / m).exists() for m in models):
         return True
     src = LEGACY_PIPER_DIR
-    if not (src / "piper" / "piper.exe").exists():
+    if not src.exists():
         return False
     try:
         PIPER_DIR.mkdir(parents=True, exist_ok=True)
-        if not (PIPER_DIR / "piper" / "piper.exe").exists():
+        if (src / "piper" / "piper.exe").exists() and not (PIPER_DIR / "piper" / "piper.exe").exists():
             shutil.copytree(src / "piper", PIPER_DIR / "piper", dirs_exist_ok=True)
         for f in src.glob("*.onnx"):
             shutil.copy2(f, PIPER_DIR / f.name)
@@ -96,7 +96,7 @@ def ensure_piper() -> bool:
             shutil.copy2(f, PIPER_DIR / f.name)
     except Exception:
         return False
-    return PIPER_EXE.exists() and any((PIPER_DIR / m).exists() for m in models)
+    return any((PIPER_DIR / m).exists() for m in models)
 
 # ---------------------------------------------------------------- styles
 STYLES: dict[str, dict] = {
@@ -167,6 +167,8 @@ STYLES: dict[str, dict] = {
 }
 
 # ---------------------------------------------------------------- voices
+# Official Piper voices with a declared CC0 dataset (Dmitry/Denis) plus
+# Apache-2.0 community voices from the rraaww/ru_piper model repository.
 PIPER_VOICES = [
     {
         "id": "ru_RU-dmitri-medium",
@@ -183,6 +185,22 @@ PIPER_VOICES = [
         "provider": "piper",
         "gender": "male",
         "model": "ru_RU-denis-medium.onnx",
+    },
+    {
+        "id": "ru_RU-sova200-medium",
+        "name": "Сова (офлайн)",
+        "desc": "Женский · мягкий, спокойный · Apache-2.0",
+        "provider": "piper",
+        "gender": "female",
+        "model": "ru_RU-sova200-medium.onnx",
+    },
+    {
+        "id": "ru_RU-april420-medium",
+        "name": "Апрель (офлайн)",
+        "desc": "Женский · высокий, живой · Apache-2.0",
+        "provider": "piper",
+        "gender": "female",
+        "model": "ru_RU-april420-medium.onnx",
     },
 ]
 

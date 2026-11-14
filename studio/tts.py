@@ -16,6 +16,7 @@ import json
 import math
 import re
 import subprocess
+import sys
 import urllib.request
 import wave
 from pathlib import Path
@@ -101,6 +102,14 @@ def _piper_model(voice_id: str) -> Path | None:
     return None
 
 
+def _piper_tts_installed() -> bool:
+    try:
+        import piper  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
 def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
     if not config.ensure_piper():
         raise RuntimeError(
@@ -108,9 +117,10 @@ def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
         )
     model = _piper_model(voice)
     if not model:
-        # Old projects may still point at Irina/Ruslan. Those datasets are not
-        # cleared for the commercial studio, so fall back to a CC0 voice.
-        for fallback in ("ru_RU-dmitri-medium", "ru_RU-denis-medium"):
+        # Legacy projects may point at Irina/Ruslan. Those datasets are not
+        # cleared for the commercial studio, so fall back to a safe voice.
+        for fallback in ("ru_RU-dmitri-medium", "ru_RU-denis-medium",
+                         "ru_RU-sova200-medium", "ru_RU-april420-medium"):
             model = _piper_model(fallback)
             if model:
                 voice = fallback
@@ -120,14 +130,37 @@ def synth_piper(text: str, voice: str, rate: int, key: str) -> dict:
     wav = TTS_CACHE / f"{key}.wav"
     raw = TTS_CACHE / f"{key}_raw.wav"
     length_scale = max(0.7, min(1.5, 100.0 / max(50.0, 100.0 + rate)))
-    cmd = [
-        str(config.PIPER_EXE),
-        "--model", str(model),
-        "--output_file", str(raw),
-        "--length_scale", f"{length_scale:.3f}",
-    ]
-    proc = subprocess.run(cmd, input=text.encode("utf-8"), capture_output=True,
-                          cwd=str(config.PIPER_EXE.parent))
+    # The maintained piper-tts package understands the newer community voice
+    # models with multi-codepoint phonemes. The legacy MIT binary is kept as a
+    # fallback for older installations that only have the official CC0 voices.
+    if _piper_tts_installed():
+        text_file = TTS_CACHE / f"{key}.txt"
+        text_file.write_text(text, encoding="utf-8")
+        cmd = [
+            sys.executable, "-m", "piper",
+            "-m", str(model),
+            "-f", str(raw),
+            "--input-file", str(text_file),
+            "--length-scale", f"{length_scale:.3f}",
+        ]
+        cwd = None
+        input_data = None
+    else:
+        text_file = None
+        cmd = [
+            str(config.PIPER_EXE),
+            "--model", str(model),
+            "--output_file", str(raw),
+            "--length_scale", f"{length_scale:.3f}",
+        ]
+        cwd = str(config.PIPER_EXE.parent)
+        input_data = text.encode("utf-8")
+    proc = subprocess.run(cmd, input=input_data, capture_output=True, cwd=cwd)
+    if text_file is not None:
+        try:
+            text_file.unlink()
+        except Exception:
+            pass
     if proc.returncode != 0 or not raw.exists():
         raise RuntimeError("Piper не смог озвучить текст: " + proc.stderr.decode("utf-8", "ignore")[:300])
     x, sr = read_wav(raw)

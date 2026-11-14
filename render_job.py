@@ -56,7 +56,10 @@ def main(payload_path: str) -> None:
     scene_index = data.get("scene_index")
     base_job_id = data.get("base_job_id")
     base_scene_count = data.get("base_scene_count")
-    piper_allowed = {"ru_RU-dmitri-medium", "ru_RU-denis-medium"}
+    piper_allowed = {
+        "ru_RU-dmitri-medium", "ru_RU-denis-medium",
+        "ru_RU-sova200-medium", "ru_RU-april420-medium",
+    }
     voice = str(settings.get("voice") or "")
     quality = str(settings.get("quality") or "quality")
     if quality not in ("fast", "quality", "ultra"):
