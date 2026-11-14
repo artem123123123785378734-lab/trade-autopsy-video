@@ -624,7 +624,7 @@ def _draw_character(c, ox, oy, frame: int, ch: dict, limbs: bool = True):
 
     # body
     _rect(c, ox + body_x - 1, oy + 21, body_w + 2, 22, outline)
-    _rect(c, ox + body_x, oy + 21, body_w, 1, gfx.blend(shirt, (0, 0, 0), 0.45))
+    _rect(c, ox + body_x, oy + 21, body_w, 1, gfx.blend(shirt, (255, 255, 255), 0.10))
     _rect(c, ox + body_x, oy + 22, body_w, 20, shirt)
     _rect(c, ox + body_x, oy + 22, body_w, 3, shirt_light)
     _rect(c, ox + body_x + body_w - 2, oy + 25, 2, 15, shirt_shadow)
@@ -1244,25 +1244,15 @@ class PixelRenderer:
         phase = (t + scene_index * 0.7) % 4.4
         blink = phase < 0.13
         if blink:
-            _rect(c, x + eye1 * s, y + eye_y * s, 2 * s, 1 * s, ch["skin"], 255)
-            _rect(c, x + eye2 * s, y + eye_y * s, 2 * s, 1 * s, ch["skin"], 255)
-        else:
-            dx = 0
-            dy = 0
-            if anim in ("point", "show", "explain"):
-                dx = 1
-            elif anim == "think":
-                dx, dy = -1, -1
-            elif anim in ("scared", "surprise"):
-                dy = -1
-            dx = max(-1, min(1, dx + int(round(math.sin(t * 1.1) * 0.5))))
-            for ex in (eye1, eye2):
-                _rect(c, x + ex * s, y + eye_y * s, 2 * s, 2 * s,
-                      (248, 248, 245), 245)
-                _rect(c, x + (ex + 0.5) * s, y + (eye_y + 0.5) * s,
-                      1 * s, 1 * s, ch["eye_color"], 255)
-                _pixel(c, x + (ex + 0.5) * s, y + (eye_y + 0.5) * s,
-                       (255, 255, 255), 230)
+            # close the sprite's own eyes for one or two frames
+            _rect(c, x + (head_x + 2) * s, y + 11 * s, 4 * s, 2 * s,
+                  ch["skin"], 255)
+            _rect(c, x + (head_x + 10) * s, y + 11 * s, 4 * s, 2 * s,
+                  ch["skin"], 255)
+            _rect(c, x + (head_x + 3) * s, y + 12 * s, 2 * s, 1 * s,
+                  gfx.blend(ch["skin"], (0, 0, 0), 0.18), 200)
+            _rect(c, x + (head_x + 11) * s, y + 12 * s, 2 * s, 1 * s,
+                  gfx.blend(ch["skin"], (0, 0, 0), 0.18), 200)
         brow_y = 8.0 if anim not in ("scared", "surprise") else 7.0
         brow = (18, 22, 28)
         if anim in ("error", "scared", "surprise"):
@@ -1311,17 +1301,7 @@ class PixelRenderer:
             _rect(c, x + mouth_x * s, y + mouth_y * s, 3 * s, 1 * s, dark, 235)
             _rect(c, x + (mouth_x + 1) * s, y + (mouth_y + 1) * s, 1 * s, 1 * s,
                   lip, 150)
-        # nose bridge / nostril and chin shadow add depth without extra sprites
-        _pixel(c, x + (head_x + 7) * s + shift, y + 13.8 * s,
-               gfx.blend(ch["skin"], (255, 255, 255), 0.18), 150)
-        _pixel(c, x + (head_x + 6) * s + shift, y + 14.6 * s, lip, 110)
-        _rect(c, x + (mouth_x + 1) * s, y + 19 * s, 2 * s, 1 * s,
-              gfx.blend(ch["skin"], (0, 0, 0), 0.12), 90)
-        if anim in ("victory", "happy", "thumbs_up"):
-            _rect(c, x + (head_x + 2) * s, y + 14 * s, 2 * s, 1 * s,
-                  (235, 110, 130), 75)
-            _rect(c, x + (head_x + 12) * s, y + 14 * s, 2 * s, 1 * s,
-                  (235, 110, 130), 75)
+        # nose/chin live in the sprite; only add expression brows, mouth and blush here
         if anim in ("scared", "error"):
             _rect(c, x + (head_x + 14) * s, y + 9 * s, 1 * s, 2 * s, (120, 220, 255), 170)
         if ch.get("accessory") == "glasses":
