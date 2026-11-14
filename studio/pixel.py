@@ -62,6 +62,129 @@ ICONS = {
     "wave": ("0010000", "0111000", "0010100", "0010100", "0011000", "0110000", "0000000"),
 }
 
+# Tiny 3x5 pixel font for object / app labels. Latin only, so it stays crisp
+# at the low-resolution pixel canvas.
+PIXEL_FONT = {
+    "A": ("010", "101", "111", "101", "101"),
+    "B": ("110", "101", "110", "101", "110"),
+    "C": ("011", "100", "100", "100", "011"),
+    "D": ("110", "101", "101", "101", "110"),
+    "E": ("111", "100", "110", "100", "111"),
+    "F": ("111", "100", "110", "100", "100"),
+    "G": ("011", "100", "101", "101", "011"),
+    "H": ("101", "101", "111", "101", "101"),
+    "I": ("111", "010", "010", "010", "111"),
+    "J": ("001", "001", "001", "101", "010"),
+    "K": ("101", "101", "110", "101", "101"),
+    "L": ("100", "100", "100", "100", "111"),
+    "M": ("101", "111", "111", "101", "101"),
+    "N": ("101", "111", "111", "111", "101"),
+    "O": ("010", "101", "101", "101", "010"),
+    "P": ("110", "101", "110", "100", "100"),
+    "Q": ("010", "101", "101", "111", "011"),
+    "R": ("110", "101", "110", "101", "101"),
+    "S": ("011", "100", "010", "001", "110"),
+    "T": ("111", "010", "010", "010", "010"),
+    "U": ("101", "101", "101", "101", "011"),
+    "V": ("101", "101", "101", "101", "010"),
+    "W": ("101", "101", "111", "111", "101"),
+    "X": ("101", "101", "010", "101", "101"),
+    "Y": ("101", "101", "010", "010", "010"),
+    "Z": ("111", "001", "010", "100", "111"),
+    "0": ("111", "101", "101", "101", "111"),
+    "1": ("010", "110", "010", "010", "111"),
+    "2": ("110", "001", "010", "100", "111"),
+    "3": ("110", "001", "010", "001", "110"),
+    "4": ("101", "101", "111", "001", "001"),
+    "5": ("111", "100", "110", "001", "110"),
+    "6": ("011", "100", "110", "101", "010"),
+    "7": ("111", "001", "010", "010", "010"),
+    "8": ("010", "101", "010", "101", "010"),
+    "9": ("010", "101", "011", "001", "110"),
+    "-": ("000", "000", "111", "000", "000"),
+    ".": ("000", "000", "000", "000", "010"),
+    "?": ("010", "101", "001", "000", "010"),
+    " ": ("000", "000", "000", "000", "000"),
+}
+
+KNOWN_TOOLS = (
+    ("chatgpt", "CHATGPT", (16, 163, 127)),
+    ("gpt-4", "GPT-4", (16, 163, 127)),
+    ("gpt", "GPT", (16, 163, 127)),
+    ("claude", "CLAUDE", (217, 119, 87)),
+    ("gemini", "GEMINI", (66, 133, 244)),
+    ("midjourney", "MIDJOURNEY", (124, 92, 255)),
+    ("perplexity", "PERPLEXITY", (32, 184, 205)),
+    ("copilot", "COPILOT", (139, 92, 246)),
+    ("notion", "NOTION", (207, 207, 207)),
+    ("dall-e", "DALL-E", (255, 184, 77)),
+    ("dalle", "DALLE", (255, 184, 77)),
+    ("stable diffusion", "STABLE", (168, 85, 247)),
+    ("suno", "SUNO", (249, 115, 22)),
+    ("runway", "RUNWAY", (34, 211, 238)),
+    ("elevenlabs", "ELEVENLABS", (244, 244, 244)),
+)
+
+# Generic AI words are checked after explicit props: "открой сайт и пользуйся
+# нейросетями" must show the website, not a generic AI card.
+AI_KEYWORDS = (
+    ("нейросет", "AI", (198, 255, 61)),
+    ("искусственн", "AI", (198, 255, 61)),
+)
+
+PROP_KEYWORDS = (
+    (("сайт", "сервис", "платформ", "приложен", "браузер", "ссылка"), "site", "SITE"),
+    (("телефон", "смартфон", "мобиль"), "phone", "PHONE"),
+    (("ноутбук", "компьютер", "макбук", "клавиатур"), "laptop", "LAPTOP"),
+    (("книг", "учебник", "статья", "чтени"), "book", "BOOK"),
+    (("кофе", "кружк", "чай", "напит"), "mug", "COFFEE"),
+    (("деньг", "доллар", "рубл", "купюр", "монет", "доход", "прибыл"), "coin", "MONEY"),
+    (("квартир", "дом", "недвиж", "жиль"), "house", "HOME"),
+    (("машин", "авто", "тачк"), "car", "CAR"),
+    (("врем", "час", "таймер", "дедлайн", "минут"), "clock", "TIME"),
+    (("ключ", "доступ", "парол"), "key", "KEY"),
+    (("запуск", "ракет", "стартап", "рост"), "rocket", "START"),
+    (("иде", "мозг", "вдохнов", "креатив"), "bulb", "IDEA"),
+    (("цель", "мишен", "результат"), "target", "TARGET"),
+    (("план", "список", "шаг", "чек-лист", "чеклист"), "checklist", "PLAN"),
+    (("журнал", "дневник", "запис", "сделк"), "journal", "JOURNAL"),
+)
+
+
+def detect_story_prop(text: str, title: str = "") -> dict | None:
+    low = f"{text} {title}".lower()
+    # 1. Named apps and tools are the most specific signal.
+    for key, label, color in KNOWN_TOOLS:
+        if key in low:
+            return {"kind": "app", "label": label, "color": color, "tool": key}
+    # 2. Explicit objects and sites beat generic words like "нейросети".
+    for keys, kind, label in PROP_KEYWORDS:
+        if any(k in low for k in keys):
+            return {"kind": kind, "label": label, "color": None, "tool": ""}
+    # 3. Generic AI mention is the last resort.
+    for key, label, color in AI_KEYWORDS:
+        if key in low:
+            return {"kind": "app", "label": label, "color": color, "tool": key}
+    return None
+
+
+def _draw_pixel_text(c, text: str, x: float, y: float, color, alpha: int = 255,
+                     scale: int = 1):
+    cursor = x
+    for ch in str(text).upper():
+        glyph = PIXEL_FONT.get(ch)
+        if not glyph:
+            cursor += 4 * scale
+            continue
+        for row, line in enumerate(glyph):
+            for col, bit in enumerate(line):
+                if bit == "1":
+                    _rect(c, cursor + col * scale, y + row * scale,
+                          scale, scale, color, alpha)
+        cursor += 4 * scale
+    return cursor
+
+
 VISUALS = ("room", "chart", "phone", "board", "terminal", "none")
 ANIMATIONS = (
     "auto", "idle", "talk", "explain", "point", "surprise", "happy", "sad",
@@ -2231,6 +2354,185 @@ class PixelRenderer:
                 _rect(c, lx, ly, 3 + (i % 2), 9 - i, 
                       gfx.blend(good if "fitness" in str(self.profile) else accent, (0, 0, 0), 0.62), 60)
 
+    def _draw_story_prop(self, c, scene, t, scene_index, accent, accent2,
+                         highlight, good, text, muted, card, bg):
+        """Show the thing the scene is talking about: app, site, phone, book, etc."""
+        prop = detect_story_prop(scene.get("text", ""), scene.get("title", ""))
+        if not prop:
+            return
+        enter = gfx.ease_out(gfx.clamp((t - 0.35) / 0.50))
+        if enter <= 0.01:
+            return
+        color = tuple(prop.get("color") or accent)
+        w, h = 70, 94
+        x = 182
+        y = 84 + math.sin(t * 1.9 + scene_index * 0.7) * 2.0
+        cx, cy = x + w / 2, y + h / 2
+        gfx.orb(c, cx, cy, 46, color, 10, 3)
+        c.save()
+        c.translate(cx, cy)
+        c.scale(0.72 + 0.28 * enter, 0.72 + 0.28 * enter)
+        c.translate(-cx, -cy)
+        _rect(c, x + 2, y + 3, w, h, (0, 0, 0), 100)
+        _rect(c, x, y, w, h, (5, 8, 11), 240)
+        _rect(c, x + 1, y + 1, w - 2, h - 2,
+              gfx.blend(card, color, 0.13), 245)
+        _rect(c, x, y, w, 1, color, 220)
+        _rect(c, x, y, 1, h, color, 115)
+        _rect(c, x + 1, y + 2, w - 2, 11, gfx.blend(card, color, 0.26))
+        _draw_pixel_text(c, str(prop["label"])[:12], x + 5, y + 5, color, 255, 1)
+        for i in range(3):
+            _pixel(c, x + w - 11 + i * 3, y + 5, color if i == 0 else muted, 190)
+        cx0, cy0 = x + 5, y + 16
+        cw, ch = w - 10, h - 22
+        kind = str(prop["kind"])
+        if kind == "app":
+            # chat window: user bubble, answer bubble, typing cursor
+            for i in range(3):
+                grow = gfx.clamp((enter - 0.18 - i * 0.16) / 0.30)
+                if grow <= 0:
+                    continue
+                bw = 34 if i % 2 == 0 else 28
+                bx = cx0 + (cw - bw - 1 if i % 2 else 1)
+                by = cy0 + 4 + i * 16
+                _rect(c, bx, by, bw, 9 + int(2 * grow),
+                      gfx.blend(card, color, 0.35 if i % 2 else 0.16), 240)
+                _rect(c, bx + 2, by + 2, bw - 5, 1, highlight, 150)
+                _rect(c, bx + 2, by + 5, max(5, bw - 10), 1, muted, 130)
+            for i in range(3):
+                pulse = 0.45 + 0.55 * (0.5 + 0.5 * math.sin(t * 7 + i * 1.4))
+                _pixel(c, cx0 + 2 + i * 3, y + h - 9, color, int(220 * pulse))
+            _rect(c, x + 5, y + h - 5, cw - 2, 1, muted, 80)
+        elif kind == "site":
+            _rect(c, cx0, cy0, cw, 8, gfx.blend(card, color, 0.18))
+            _rect(c, cx0 + 2, cy0 + 2, 3, 3, good, 190)
+            _draw_pixel_text(c, "TA.SITE", cx0 + 8, cy0 + 2, muted, 160, 1)
+            load = gfx.clamp(t / 1.4)
+            _rect(c, cx0, cy0 + 10, int(cw * load), 1, color, 220)
+            for i in range(3):
+                _rect(c, cx0, cy0 + 16 + i * 9, cw - (i % 2) * 12, 2,
+                      highlight if i == 0 else muted, 150 - i * 20)
+            _rect(c, cx0 + 4, cy0 + 44, 14, 9, gfx.blend(card, color, 0.32))
+            _rect(c, cx0 + cw - 8, cy0 + 48 + math.sin(t * 4) * 3, 3, 3,
+                  highlight, 210)
+        elif kind == "phone":
+            _rect(c, cx0 + 8, cy0, cw - 16, ch - 3, (8, 11, 14), 245)
+            _rect(c, cx0 + 10, cy0 + 2, cw - 20, ch - 7,
+                  gfx.blend(card, color, 0.14), 245)
+            _rect(c, cx0 + cw // 2 - 4, cy0 + 2, 8, 2, muted, 150)
+            _rect(c, cx0 + 13, cy0 + 8, cw - 26, 14,
+                  gfx.blend(card, color, 0.35), 230)
+            _rect(c, cx0 + 16, cy0 + 11, cw - 32, 1, highlight, 170)
+            _rect(c, cx0 + 16, cy0 + 15, cw - 38, 1, muted, 140)
+            _rect(c, cx0 + cw // 2 - 5, cy0 + ch - 10, 10, 3, color, 220)
+        elif kind == "book":
+            _rect(c, cx0 + 2, cy0 + 1, cw - 4, ch - 4, gfx.blend(card, color, 0.2), 245)
+            _rect(c, cx0 + 6, cy0 + 4, 1, ch - 10, color, 220)
+            for i in range(4):
+                _rect(c, cx0 + 10, cy0 + 8 + i * 5, cw - 18 - (i % 2) * 8, 1,
+                      highlight if i == 0 else muted, 150)
+            flip = gfx.clamp((t - 0.9) / 0.8)
+            _rect(c, cx0 + cw - 8, cy0 + 4, 2, int((ch - 10) * flip), color, 80)
+        elif kind == "mug":
+            _rect(c, cx0 + 6, cy0 + 8, cw - 20, ch - 18, (14, 18, 20), 245)
+            _rect(c, cx0 + 8, cy0 + 10, cw - 24, ch - 22, gfx.blend(color, (0, 0, 0), 0.25), 245)
+            _rect(c, cx0 + cw - 14, cy0 + 14, 8, 14, (14, 18, 20), 245)
+            _rect(c, cx0 + cw - 13, cy0 + 16, 6, 10, color, 180)
+            for i in range(3):
+                sy = cy0 + 4 - int((t * 8 + i * 5) % 15)
+                _pixel(c, cx0 + 12 + i * 4 + math.sin(t * 2 + i) * 1.5, sy,
+                       highlight, 90)
+        elif kind == "coin":
+            for i in range(3):
+                yy = cy0 + 10 + i * 13
+                _rect(c, cx0 + 8, yy, cw - 16, 9, (14, 18, 20), 240)
+                _rect(c, cx0 + 10, yy + 1, cw - 20, 7, (255, 198, 86), 240)
+                _draw_pixel_text(c, "S", cx0 + cw // 2 - 2, yy + 2, (55, 42, 18), 220, 1)
+                _rect(c, cx0 + 10, yy + 1, cw - 20, 1, (255, 238, 170), 180)
+        elif kind == "house":
+            path = skia.Path()
+            path.moveTo(cx0 + 2, cy0 + 26)
+            path.lineTo(cx0 + cw // 2, cy0 + 6)
+            path.lineTo(cx0 + cw - 2, cy0 + 26)
+            path.close()
+            paint = skia.Paint(AntiAlias=False)
+            paint.setColor(gfx.col(color, 230))
+            c.drawPath(path, paint)
+            _rect(c, cx0 + 8, cy0 + 26, cw - 16, ch - 34, gfx.blend(card, color, 0.25), 245)
+            _rect(c, cx0 + 13, cy0 + 33, 9, 18, color, 220)
+            _rect(c, cx0 + 26, cy0 + 33, 9, 8, highlight, 180)
+        elif kind == "car":
+            _rect(c, cx0 + 3, cy0 + 26, cw - 6, 14, color, 230)
+            _rect(c, cx0 + 12, cy0 + 16, cw - 24, 12, color, 230)
+            _rect(c, cx0 + 15, cy0 + 18, cw - 30, 7, highlight, 120)
+            for wx in (cx0 + 10, cx0 + cw - 14):
+                _rect(c, wx, cy0 + 38, 8, 8, (10, 12, 14), 245)
+                _rect(c, wx + 2, cy0 + 40, 4, 4, muted, 180)
+        elif kind == "clock":
+            _rect(c, cx0 + 8, cy0 + 4, cw - 16, ch - 8, (10, 14, 17), 240)
+            _rect(c, cx0 + 10, cy0 + 6, cw - 20, ch - 12, gfx.blend(card, color, 0.25), 245)
+            cx2, cy2 = cx0 + cw // 2, cy0 + ch // 2
+            for i in range(12):
+                a = math.radians(i * 30)
+                _pixel(c, cx2 + math.cos(a) * 12, cy2 + math.sin(a) * 12, color, 150)
+            ah = math.radians(t * 12)
+            _pixel_line(c, cx2, cy2, cx2 + math.cos(ah) * 8, cy2 + math.sin(ah) * 8, 1, highlight)
+        elif kind == "key":
+            _rect(c, cx0 + 2, cy0 + 12, 18, 18, color, 230)
+            _rect(c, cx0 + 7, cy0 + 17, 8, 8, bg, 255)
+            _rect(c, cx0 + 20, cy0 + 20, cw - 26, 5, color, 230)
+            _rect(c, cx0 + cw - 14, cy0 + 20, 4, 9, color, 230)
+            _rect(c, cx0 + cw - 8, cy0 + 20, 3, 7, color, 230)
+        elif kind == "rocket":
+            path = skia.Path()
+            path.moveTo(cx0 + cw // 2, cy0 + 2)
+            path.lineTo(cx0 + cw // 2 + 9, cy0 + 28)
+            path.lineTo(cx0 + cw // 2 - 9, cy0 + 28)
+            path.close()
+            paint = skia.Paint(AntiAlias=False)
+            paint.setColor(gfx.col(color, 235))
+            c.drawPath(path, paint)
+            _rect(c, cx0 + cw // 2 - 3, cy0 + 28, 6, 9, (255, 150, 60), 230)
+            _rect(c, cx0 + cw // 2 - 1, cy0 + 36, 2, 5, (255, 220, 100), 220)
+        elif kind == "bulb":
+            gfx.orb(c, cx0 + cw // 2, cy0 + 22, 18, color, 70, 3)
+            _rect(c, cx0 + cw // 2 - 7, cy0 + 12, 14, 17, color, 230)
+            _rect(c, cx0 + cw // 2 - 4, cy0 + 29, 8, 4, muted, 220)
+            for i in range(5):
+                a = math.radians(-140 + i * 35)
+                _pixel(c, cx0 + cw // 2 + math.cos(a) * 24,
+                       cy0 + 22 + math.sin(a) * 24, highlight, 140)
+        elif kind == "target":
+            for rr, cc in ((20, color), (14, highlight), (8, color), (3, (255, 255, 255))):
+                gfx.orb(c, cx0 + cw // 2, cy0 + 24, rr, cc, 190, 2)
+            _pixel_line(c, cx0 + cw // 2 - 26, cy0 + 24, cx0 + cw // 2 + 26, cy0 + 24, 1, color, 70)
+            _pixel_line(c, cx0 + cw // 2, cy0 - 2, cx0 + cw // 2, cy0 + 50, 1, color, 70)
+        elif kind == "checklist":
+            _rect(c, cx0 + 4, cy0 + 3, cw - 8, ch - 8, gfx.blend(card, color, 0.22), 245)
+            _rect(c, cx0 + cw // 2 - 5, cy0 + 1, 10, 4, color, 230)
+            for i in range(3):
+                _rect(c, cx0 + 8, cy0 + 12 + i * 10, 5, 5, color if i == 0 else muted, 220)
+                _rect(c, cx0 + 16, cy0 + 13 + i * 10, cw - 24, 2, highlight if i == 0 else muted, 150)
+                if i == 0:
+                    _pixel(c, cx0 + 9, cy0 + 13, bg, 230)
+                    _pixel(c, cx0 + 10, cy0 + 14, bg, 230)
+                    _pixel(c, cx0 + 11, cy0 + 12, bg, 230)
+        elif kind == "journal":
+            _rect(c, cx0 + 4, cy0 + 2, cw - 8, ch - 6, gfx.blend(card, color, 0.2), 245)
+            _rect(c, cx0 + 4, cy0 + 2, 4, ch - 6, color, 220)
+            for i in range(4):
+                _rect(c, cx0 + 12, cy0 + 8 + i * 8, cw - 20 - (i % 2) * 10, 1, highlight if i == 0 else muted, 140)
+            _rect(c, cx0 + cw - 14, cy0 + 36, 7, 2, color, 220)
+        else:
+            gfx.orb(c, cx0 + cw // 2, cy0 + 22, 18, color, 50, 3)
+            _draw_pixel_text(c, "AI", cx0 + cw // 2 - 4, cy0 + 20, color, 255, 2)
+        for i in range(6):
+            a = i * math.tau / 6 + t * 0.8
+            rr = 34 + 4 * math.sin(t * 3 + i)
+            _pixel(c, cx + math.cos(a) * rr, cy + math.sin(a) * rr,
+                   color if i % 2 else highlight, int(120 * enter))
+        c.restore()
+
     def _draw_world(self, c, scene, t, scene_index):
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
         parallax = bool(self.settings.get("pixel_parallax", True))
@@ -2390,6 +2692,8 @@ class PixelRenderer:
         # storyteller; charts and windows are supporting context.
         _rect(c, 0, 44, SW, 196, (0, 0, 0), 26)
         self._draw_atmosphere(c, t, scene_index, tint, accent, accent2, highlight, kind, visual)
+        self._draw_story_prop(c, scene, t, scene_index, accent, accent2, highlight,
+                             good, text, muted, card, bg)
         # foreground silhouettes frame the stage and add depth
         for i in range(10):
             _rect(c, i * 3, 350 + i * 4, 26 - i * 2, 4, (2, 4, 6), 120)
