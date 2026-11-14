@@ -13,10 +13,12 @@ import base64
 import copy
 import io
 import math
+import os
 import shutil
 import subprocess
 import time
 import wave
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -3355,6 +3357,16 @@ def _encode_scene(renderer: PixelRenderer, scene_index: int, duration: float,
     return path
 
 
+def _render_scene_process(plan: dict, settings: dict, audio_path: str,
+                          scene_index: int, duration: float, clip: str,
+                          fast: bool, work_root: str) -> str:
+    """Render one scene in a worker process (its own Skia surface and sprite)."""
+    renderer = PixelRenderer(plan, settings, Path(work_root))
+    renderer.set_audio(Path(audio_path))
+    _encode_scene(renderer, scene_index, duration, Path(clip), fast)
+    return clip
+
+
 def render_pixel_video(plan: dict, settings: dict, out_path: Path, audio_path: Path,
                        workdir: Path, progress=None, cancel=None,
                        scene_index: int | None = None,
@@ -3363,35 +3375,84 @@ def render_pixel_video(plan: dict, settings: dict, out_path: Path, audio_path: P
     if not scenes:
         raise RuntimeError("Нет сцен для пиксельного рендера")
     fast = settings.get("quality") == "fast"
-    renderer = PixelRenderer(plan, settings, workdir)
-    renderer.set_audio(audio_path)
     workdir.mkdir(parents=True, exist_ok=True)
     clips: list[Path] = []
     reuse = reuse_clips or {}
     total_scenes = len(scenes)
-    for i, scene in enumerate(scenes):
-        duration = max(1.0, float(scene.get("end", 0)) - float(scene.get("start", 0)))
-        clip = workdir / f"scene-{i + 1:02d}.mp4"
-        if scene_index is not None and scene_index != i and i in reuse and Path(reuse[i]).exists():
-            shutil.copyfile(reuse[i], clip)
+
+    # Full renders are scene-parallel: each worker gets its own renderer,
+    # sprite sheet and FFmpeg pipe. This is the difference between a 70-second
+    # video finishing in minutes instead of hitting the Actions timeout.
+    parallel = (
+        scene_index is None
+        and len(scenes) >= 2
+        and (os.name != "nt" or os.environ.get("PIXEL_PARALLEL") == "1")
+        and (os.cpu_count() or 1) >= 2
+    )
+    if parallel:
+        pending = {}
+        for i, scene in enumerate(scenes):
+            duration = max(1.0, float(scene.get("end", 0)) - float(scene.get("start", 0)))
+            clip = workdir / f"scene-{i + 1:02d}.mp4"
+            if i in reuse and Path(reuse[i]).exists():
+                shutil.copyfile(reuse[i], clip)
+                clips.append(clip)
+                continue
+            pending[i] = (duration, clip)
+        if pending:
+            workers = max(1, min(4, os.cpu_count() or 2, len(pending)))
+            done = 0
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                futures = {
+                    pool.submit(
+                        _render_scene_process,
+                        plan, settings, str(audio_path), i, duration, str(clip), fast,
+                        str(workdir / f"worker-{i + 1:02d}"),
+                    ): i
+                    for i, (duration, clip) in pending.items()
+                }
+                for future in as_completed(futures):
+                    if cancel and cancel():
+                        pool.shutdown(wait=False, cancel_futures=True)
+                        raise RuntimeError("Генерация отменена")
+                    i = futures[future]
+                    future.result()
+                    done += 1
+                    if progress:
+                        progress(
+                            45 + int(40 * (len(clips) + done) / max(1, total_scenes)),
+                            f"Пиксельная сцена {i + 1}/{total_scenes}",
+                        )
+            clips.extend(clip for _, clip in pending.values())
+        # restore scene order after parallel workers
+        order = {i: workdir / f"scene-{i + 1:02d}.mp4" for i in range(total_scenes)}
+        clips = [order[i] for i in range(total_scenes) if order[i].exists()]
+    else:
+        renderer = PixelRenderer(plan, settings, workdir)
+        renderer.set_audio(audio_path)
+        for i, scene in enumerate(scenes):
+            duration = max(1.0, float(scene.get("end", 0)) - float(scene.get("start", 0)))
+            clip = workdir / f"scene-{i + 1:02d}.mp4"
+            if scene_index is not None and scene_index != i and i in reuse and Path(reuse[i]).exists():
+                shutil.copyfile(reuse[i], clip)
+                clips.append(clip)
+                continue
+            if scene_index is None and i in reuse and Path(reuse[i]).exists():
+                shutil.copyfile(reuse[i], clip)
+                clips.append(clip)
+                continue
+            if progress:
+                progress(45 + int(40 * i / max(1, total_scenes)),
+                         f"Пиксельная сцена {i + 1}/{total_scenes}")
+            _encode_scene(
+                renderer, i, duration, clip, fast,
+                progress=lambda p, idx=i: progress(
+                    45 + int(40 * (idx + max(0.0, min(1.0, p))) / max(1, total_scenes)),
+                    f"Пиксельная сцена {idx + 1}/{total_scenes}",
+                ) if progress else None,
+                cancel=cancel,
+            )
             clips.append(clip)
-            continue
-        if scene_index is None and i in reuse and Path(reuse[i]).exists():
-            shutil.copyfile(reuse[i], clip)
-            clips.append(clip)
-            continue
-        if progress:
-            progress(45 + int(40 * i / max(1, total_scenes)),
-                     f"Пиксельная сцена {i + 1}/{total_scenes}")
-        _encode_scene(
-            renderer, i, duration, clip, fast,
-            progress=lambda p, idx=i: progress(
-                45 + int(40 * (idx + max(0.0, min(1.0, p))) / max(1, total_scenes)),
-                f"Пиксельная сцена {idx + 1}/{total_scenes}",
-            ) if progress else None,
-            cancel=cancel,
-        )
-        clips.append(clip)
     if progress:
         progress(88, "Склеиваю сцены и накладываю звук")
     render._concat_and_mux(clips, audio_path, out_path, workdir, config.FFMPEG)
