@@ -2025,6 +2025,12 @@ class PixelRenderer:
             hop = max(0.0, math.sin(t * math.pi)) * 6.0
         y = ground_y - hop
         # soft stage light + floor highlight where the character stands
+        if t < 0.6:
+            dust_k = 1.0 - t / 0.6
+            for i in range(3):
+                _rect(c, x + char_w / 2 + (i - 1) * 10 * scale,
+                      ground_y - 1, 4 * scale, 2 * scale,
+                      (190, 190, 180), int(55 * dust_k))
         gfx.orb(c, x + char_w / 2, ground_y + FRAME_H * scale * 0.52,
                 max(20, char_w * 0.78), tint, 10, 2)
         _rect(c, x - 5, ground_y + FRAME_H * scale - 2, char_w + 10, 3,
@@ -2034,9 +2040,10 @@ class PixelRenderer:
         feet_x = x + char_w / 2
         feet_y = y + FRAME_H * scale
         c.save()
-        if t < 0.42:
-            k = gfx.ease_out(gfx.clamp(t / 0.42))
-            c.translate(0, (1.0 - k) * 24)
+        if t < 0.55:
+            k = gfx.ease_out(gfx.clamp(t / 0.55))
+            side = -1 if scene_index % 2 == 0 else 1
+            c.translate(side * (1.0 - k) * 70, (1.0 - k) * 24)
         lean = math.sin(t * 0.85) * 0.7
         if anim in ("point", "show"):
             lean += -1.8
@@ -2082,6 +2089,10 @@ class PixelRenderer:
                 c.drawImageRect(self.sheet, src_body, dst_body, self.nearest, rim)
             except Exception:
                 rim = None
+            tail_sway = math.sin(t * 2.2 + scene_index) * 1.2
+            _rect(c, x + body_dx + 10 * scale + tail_sway, y + 37 * scale,
+                  4 * scale, 7 * scale,
+                  gfx.blend(self.character["shirt"], (0, 0, 0), 0.55), 210)
             breath = 1.0 + 0.006 * math.sin(t * 2.1)
             waist_x = x + body_dx + 20 * scale
             waist_y = y + 40 * scale
@@ -2092,6 +2103,10 @@ class PixelRenderer:
             _draw_sprite_part(c, self.sheet, 0, 21, FRAME_W, FRAME_H - 21,
                               x + body_dx, y + 21 * scale, self.nearest, scale)
             c.restore()
+            _rect(c, x + body_dx + 19 * scale, y + 22 * scale,
+                  1 * scale, 9 * scale, (28, 34, 42), 220)
+            _rect(c, x + body_dx + 19 * scale + tail_sway * 0.5, y + 30 * scale,
+                  2 * scale, 2 * scale, tuple(gfx.ACCENT), 220)
             _draw_limbs(c, x + body_dx, y, scale, self.character, anim, t, env, part="arms")
             # articulated head: tilt, nod and reaction
             head_dx = 0.0
@@ -2319,6 +2334,21 @@ class PixelRenderer:
             None,
         )
         full.restore()
+        if t < 0.22:
+            k = 1.0 - t / 0.22
+            blur = skia.Paint()
+            blur.setAlphaf(0.28 * k)
+            for dx in (-7, 7):
+                full.save()
+                full.translate(dx, 0)
+                full.drawImageRect(
+                    low_img,
+                    skia.Rect.MakeXYWH(x0, y0, src_w, src_h),
+                    skia.Rect.MakeWH(self.out_w, self.out_h),
+                    self.nearest,
+                    blur,
+                )
+                full.restore()
         # scene color script
         tint = tuple(self.profile.get("tint", (120, 140, 200)))
         if kind == "problem":
@@ -2332,6 +2362,13 @@ class PixelRenderer:
             [0.0, 0.55, 1.0],
         ))
         full.drawRect(skia.Rect.MakeWH(self.out_w, self.out_h), grade)
+        leak = skia.Paint()
+        leak.setShader(skia.GradientShader.MakeRadial(
+            skia.Point(self.out_w * 0.9, self.out_h * 0.12), self.out_w * 0.75,
+            [gfx.col(tint, 22), gfx.col(tint, 0)],
+            [0.0, 1.0],
+        ))
+        full.drawRect(skia.Rect.MakeWH(self.out_w, self.out_h), leak)
         if kind == "hook" and t < 0.55:
             k = 1.0 - t / 0.55
             for i in range(5):
@@ -2539,7 +2576,7 @@ def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
     sway = math.sin(t * 1.65) * 4.0
     breath = math.sin(t * 2.1) * 2.0
 
-    def arm(sh, a1, a2, sleeve=shirt):
+    def arm(sh, a1, a2, sleeve=shirt, side="r"):
         a1r = math.radians(a1)
         a2r = math.radians(a1 + a2)
         ex = sh[0] + math.cos(a1r) * 7.4
@@ -2572,6 +2609,25 @@ def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
         fx = hxx + math.cos(a2r) * 2.0 * scale
         fy = hyy + math.sin(a2r) * 2.0 * scale
         _pixel_line(c, hxx, hyy, fx, fy, max(1, int(scale * 0.8)), skin)
+        if side == "r" and anim == "point":
+            px = hxx + math.cos(a2r) * 11 * scale
+            py = hyy + math.sin(a2r) * 11 * scale
+            _pixel_line(c, hxx, hyy, px, py, max(1, int(scale * 0.7)),
+                        (210, 180, 120), 240)
+            _rect(c, px - scale, py - scale, 2 * scale, 2 * scale,
+                  (255, 220, 120), 240)
+            for i in range(3):
+                sx = px + math.sin(t * 7 + i * 2) * 4 * scale
+                sy = py - (3 + i * 3) * scale
+                _rect(c, sx, sy, max(1, int(scale * 0.6)), max(1, int(scale * 0.6)),
+                      (255, 220, 120), 150)
+        elif side == "r" and anim == "show":
+            _rect(c, hxx - 2 * scale, hyy - 5 * scale, 8 * scale, 11 * scale,
+                  (12, 16, 22), 240)
+            _rect(c, hxx - 1 * scale, hyy - 4 * scale, 6 * scale, 7 * scale,
+                  (30, 60, 90), 240)
+            _rect(c, hxx - 0.5 * scale, hyy + 1 * scale, 4 * scale, 1 * scale,
+                  tuple(gfx.ACCENT), 200)
 
     def leg(hip, a1, a2):
         a1r = math.radians(a1)
@@ -2623,8 +2679,8 @@ def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
         if anim in ("talk", "explain"):
             a_r -= env * 8.0
             e_r += env * 4.0
-    arm(sh_l, a_l, e_l)
-    arm(sh_r, a_r, e_r)
+    arm(sh_l, a_l, e_l, side="l")
+    arm(sh_r, a_r, e_r, side="r")
 
 
 def _draw_image_sprite(c, image, x, y, max_w: float, max_h: float, sampling):
