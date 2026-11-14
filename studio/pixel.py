@@ -1668,8 +1668,8 @@ class PixelRenderer:
             "highlight": tuple(gfx.HIGHLIGHT),
         }
         sparks = (
-            (0.2, 0.3, 0.25, 0.5, 0.45, 0.7, 0.9),
-            (0.7, 0.6, 0.65, 0.4, 0.5, 0.35, 0.3),
+            (0.18, 0.32, 0.26, 0.52, 0.44, 0.72, 0.92),
+            (0.74, 0.61, 0.68, 0.45, 0.52, 0.34, 0.28),
         )
         cards = []
         for i, item in enumerate(raw[:2]):
@@ -1681,27 +1681,125 @@ class PixelRenderer:
                 color = tuple(gfx.BAD)
                 spark = tuple(reversed(spark))
             cards.append((label, value, color, spark))
-        positions = ((30, 1086, 270, 126, -1, 0.38), (780, 1116, 270, 120, 1, 0.52))
-        for (label, value, color, spark), (x, y, w, h, side, delay) in zip(cards, positions):
-            k = gfx.ease_out(gfx.clamp((t - delay) / 0.5))
+        positions = ((30, 1076, 276, 138, -1, 0.38), (774, 1110, 276, 132, 1, 0.52))
+
+        for card_index, ((label, value, color, spark), (x, y, w, h, side, delay)) in enumerate(zip(cards, positions)):
+            k = gfx.clamp((t - delay) / 0.55)
             if k <= 0.01:
                 continue
-            dx = int((1 - k) * side * 180)
+            slide = gfx.ease_out_back(k, 1.5)
+            dx = int((1 - slide) * side * 210)
+            yy = y + int(math.sin(t * 1.3 + side) * 1.6)
             xx = x + dx
-            gfx.rrect(c, xx, y, w, h, 18, fill=(5, 9, 15), alpha=int(205 * k),
-                      stroke=color, sw=1.2)
-            gfx.rrect(c, xx, y, 4, h, 0, fill=color, alpha=int(220 * k))
-            gfx.draw_text(c, label, xx + 20, y + 34, "mono", 17, gfx.MUTED,
-                          int(210 * k), tracking=1.5)
-            gfx.draw_text(c, _count_value(value, k), xx + 20, y + 82, "black", 40, color,
-                          int(250 * k), tracking=-0.6)
-            pts = []
-            for i, v in enumerate(spark):
-                pts.append((xx + 24 + i * 36, y + h - 18 - v * 54))
-            visible = max(2, int(round(len(pts) * k)))
-            for (x1, y1), (x2, y2) in zip(pts[:visible], pts[1:visible]):
-                gfx.line(c, x1, y1, x2, y2, color, 3, int(190 * k), cap=False)
-            gfx.dot(c, pts[visible - 1][0], pts[visible - 1][1], 4, color, int(230 * k))
+            panel = skia.Rect.MakeXYWH(xx, yy, w, h)
+            pulse = 0.5 + 0.5 * math.sin(t * 3.4 + side)
+            border_a = int(150 + 70 * pulse * k)
+            gfx.rrect(c, xx, yy, w, h, 16, fill=(4, 8, 14), alpha=int(220 * k),
+                      stroke=color, sw=1.4)
+            gfx.rrect(c, xx + 2, yy + 2, w - 4, h - 4, 14, fill=None,
+                      stroke=color, sw=0.6, alpha=border_a)
+            # HUD corner brackets
+            arm = 14
+            for cx, cy, sx, sy in ((xx + 8, yy + 8, 1, 1), (xx + w - 8, yy + 8, -1, 1),
+                                   (xx + 8, yy + h - 8, 1, -1), (xx + w - 8, yy + h - 8, -1, -1)):
+                gfx.line(c, cx, cy, cx + arm * sx, cy, color, 2, int(190 * k), cap=False)
+                gfx.line(c, cx, cy, cx, cy + arm * sy, color, 2, int(190 * k), cap=False)
+            # header
+            gfx.dot(c, xx + 18, yy + 24, 3.5, color, int(220 * k))
+            gfx.draw_text(c, label, xx + 28, yy + 30, "mono", 15, gfx.MUTED,
+                          int(220 * k), tracking=1.4)
+            gfx.draw_text(c, f"{card_index + 1:02d}", xx + w - 16, yy + 29,
+                          "mono", 11, color, int(150 * k), "right", tracking=1.0)
+            # big value
+            gfx.draw_text(c, _count_value(value, k), xx + 18, yy + 68, "black", 34,
+                          color, int(250 * k), tracking=-0.7)
+
+            # chart area
+            cx0, cy0 = xx + 18, yy + 82
+            cw, chh = w - 36, h - 94
+            c.save()
+            c.clipRect(skia.Rect.MakeXYWH(cx0, cy0, cw, chh))
+            for gi in range(3):
+                gy = cy0 + chh * (0.25 + gi * 0.25)
+                for gx in range(int(cx0), int(cx0 + cw), 10):
+                    _rect(c, gx, gy, 4, 1, gfx.MUTED, 26)
+            draw_k = gfx.clamp((t - delay - 0.10) / 0.70)
+            if card_index == 0:
+                # glowing area/line chart
+                n = len(spark)
+                pts = []
+                for i, v in enumerate(spark):
+                    px = cx0 + cw * i / (n - 1)
+                    py = cy0 + chh - 3 - v * (chh - 7)
+                    pts.append((px, py))
+                visible = 1 + int(draw_k * (n - 1))
+                shown = pts[:visible]
+                if visible < n and shown:
+                    nxt = pts[visible]
+                    u = (draw_k * (n - 1)) - (visible - 1)
+                    shown = shown + [(shown[-1][0] + (nxt[0] - shown[-1][0]) * u,
+                                      shown[-1][1] + (nxt[1] - shown[-1][1]) * u)]
+                if len(shown) >= 2:
+                    area = skia.Path()
+                    area.moveTo(shown[0][0], cy0 + chh)
+                    for px, py in shown:
+                        area.lineTo(px, py)
+                    area.lineTo(shown[-1][0], cy0 + chh)
+                    area.close()
+                    fill = skia.Paint(AntiAlias=True)
+                    fill.setShader(skia.GradientShader.MakeLinear(
+                        [skia.Point(0, cy0), skia.Point(0, cy0 + chh)],
+                        [gfx.col(color, 95), gfx.col(color, 0)],
+                        [0.0, 1.0],
+                    ))
+                    c.drawPath(area, fill)
+                    for (x1, y1), (x2, y2) in zip(shown, shown[1:]):
+                        gfx.glow_line(c, x1, y1, x2, y2, color, 3, int(230 * k))
+                    lx, ly = shown[-1]
+                    gfx.dot(c, lx, ly, 5, color, int(250 * k))
+                    gfx.dot(c, lx, ly, 11, color, int(55 * k))
+                    _rect(c, lx, cy0 + 1, 1, chh - 2, color, 40)
+                    # trailing sparks
+                    for si in range(3):
+                        sx = lx - 10 - si * 9
+                        sy = ly + math.sin(t * 5 + si) * 4
+                        gfx.dot(c, sx, sy, max(1.5, 3 - si * 0.6), color, int(90 * k))
+            else:
+                # animated bars with staggered bounce
+                n = len(spark)
+                bw = cw / n * 0.62
+                for i, v in enumerate(spark):
+                    bx = cx0 + cw * i / n + (cw / n - bw) / 2
+                    bk = gfx.clamp((t - delay - 0.14 - i * 0.045) / 0.38)
+                    bk = gfx.ease_out_back(bk, 1.8) if bk < 1.0 else 1.0
+                    bh = max(2.0, (chh - 4) * v * bk)
+                    by = cy0 + chh - bh
+                    bar_color = color if i % 2 == 0 else tuple(gfx.ACCENT2)
+                    gfx.rrect(c, bx, by, bw, bh, 2.5, fill=bar_color,
+                              alpha=int(210 * k))
+                    gfx.rrect(c, bx, by, bw, min(3, bh), 2.5, fill=tuple(gfx.HIGHLIGHT),
+                              alpha=int(190 * k))
+                    if i == n - 1:
+                        gfx.dot(c, bx + bw / 2, by - 3, 3, tuple(gfx.HIGHLIGHT),
+                                int(220 * k))
+                # target line
+                ty = cy0 + chh * 0.28
+                for gx in range(int(cx0), int(cx0 + cw), 10):
+                    _rect(c, gx, ty, 5, 1, tuple(gfx.HIGHLIGHT), 70)
+            c.restore()
+
+            # scan shine
+            scan = (t * 0.42 + side * 0.23) % 1.0
+            bx = xx + scan * (w + 80) - 40
+            shine = skia.Path()
+            shine.moveTo(bx, yy + 4)
+            shine.lineTo(bx + 26, yy + 4)
+            shine.lineTo(bx + 8, yy + h - 4)
+            shine.lineTo(bx - 18, yy + h - 4)
+            shine.close()
+            sp = skia.Paint(AntiAlias=True)
+            sp.setColor(gfx.col(tuple(gfx.TEXT), int(16 * k)))
+            c.drawPath(shine, sp)
 
     def _draw_ticker(self, c, t):
         text = str(self.profile.get("ticker") or "").strip()
