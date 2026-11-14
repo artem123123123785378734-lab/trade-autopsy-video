@@ -1823,6 +1823,13 @@ class PixelRenderer:
 
     def _draw_world(self, c, scene, t, scene_index):
         bg, card, accent, accent2, highlight, good, bad, text, muted = self._palette()
+        bg_shift = math.sin(t * 0.25 + scene_index * 0.8) * 2.8
+        bg_lift = math.sin(t * 0.19 + scene_index) * 1.6
+        c.save()
+        c.translate(SW / 2, SH / 2)
+        c.scale(1.035, 1.035)
+        c.translate(-SW / 2, -SH / 2)
+        c.translate(bg_shift, bg_lift)
         visual = scene.get("pixel_visual")
         if not visual or visual == "auto":
             visual = self.settings.get("pixel_background") or _default_visual(
@@ -1970,6 +1977,7 @@ class PixelRenderer:
         self._draw_mascot(c, t, mascot_anim, tint)
 
         # character
+        c.restore()
         character_on = scene.get("character")
         if character_on is False or self.settings.get("pixel_character") is False:
             return
@@ -2349,6 +2357,21 @@ class PixelRenderer:
                     blur,
                 )
                 full.restore()
+        if self.quality != "fast":
+            try:
+                bloom = skia.Paint()
+                bloom.setAlphaf(0.22)
+                bloom.setBlendMode(skia.BlendMode.kScreen)
+                bloom.setImageFilter(skia.ImageFilters.Blur(5.0, 5.0))
+                full.drawImageRect(
+                    low_img,
+                    skia.Rect.MakeXYWH(x0, y0, src_w, src_h),
+                    skia.Rect.MakeWH(self.out_w, self.out_h),
+                    self.nearest,
+                    bloom,
+                )
+            except Exception:
+                pass
         # scene color script
         tint = tuple(self.profile.get("tint", (120, 140, 200)))
         if kind == "problem":
