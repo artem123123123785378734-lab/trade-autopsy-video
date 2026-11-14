@@ -244,6 +244,7 @@ DEFAULT_SETTINGS: dict = {
     "music": True,
     "music_preset": "tech",
     "music_gain": 0.22,
+    "music_scene_mood": True,
     "sfx": True,
     "custom_music": None,
     "style": "tech_blue",

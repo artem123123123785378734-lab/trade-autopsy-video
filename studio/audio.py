@@ -221,11 +221,12 @@ def sparkle(amp=0.14) -> np.ndarray:
 
 
 # ---------------------------------------------------------------- music
-def build_music(duration: float, preset: str, seed: int = 7) -> np.ndarray:
+def build_music(duration: float, preset: str, seed: int = 7,
+                fade: bool = True, bpm: float | None = None) -> np.ndarray:
     if preset == "none":
         return np.zeros((int(duration * config.SR), 2), dtype=np.float32)
     rng = np.random.default_rng(seed)
-    bpm = {"tech": 88.0, "ambient": 68.0, "drive": 104.0}.get(preset, 88.0)
+    bpm = float(bpm or {"tech": 88.0, "ambient": 68.0, "drive": 104.0}.get(preset, 88.0))
     beat = 60.0 / bpm
     bar = beat * 4
     n = int((duration + 0.8) * config.SR)
@@ -274,10 +275,63 @@ def build_music(duration: float, preset: str, seed: int = 7) -> np.ndarray:
     # gentle filter and level
     out = np.tanh(out * 1.1) * 0.7
     # loop-safe fade at the end
-    fade = min(int(0.8 * config.SR), n // 4)
     if fade:
-        out[:fade] *= np.linspace(0, 1, fade)[:, None]
-        out[-fade:] *= np.linspace(1, 0, fade)[:, None]
+        fade_n = min(int(0.8 * config.SR), n // 4)
+        if fade_n:
+            out[:fade_n] *= np.linspace(0, 1, fade_n)[:, None]
+            out[-fade_n:] *= np.linspace(1, 0, fade_n)[:, None]
+    return out.astype(np.float32)
+
+
+def scene_music_preset(index: int, scene: dict, base: str) -> str:
+    """Pick a musical mood for a scene without changing the user's base style."""
+    if base != "tech":
+        return base
+    kind = str(scene.get("kind") or "")
+    if kind in ("hook", "cta"):
+        return "drive"
+    if kind in ("problem", "error"):
+        return "ambient"
+    cycle = ("drive", "ambient", "tech", "tech", "ambient", "ambient",
+             "tech", "drive")
+    return cycle[index % len(cycle)]
+
+
+def build_scene_music(plan: dict, base_preset: str, seed: int = 7) -> np.ndarray:
+    """One continuous bed whose arrangement changes with every scene.
+
+    All sections share the same tempo and chord progression, so cuts land on
+    the beat and the mood can move from ambient to drive without a hard jump.
+    """
+    duration = float(plan.get("duration", 0) or 0)
+    n = int((duration + 0.35) * config.SR)
+    out = np.zeros((n, 2), dtype=np.float32)
+    scenes = plan.get("scenes") or []
+    if not scenes:
+        return build_music(duration + 0.3, base_preset, seed=seed)
+    base_bpm = {"tech": 88.0, "ambient": 88.0, "drive": 88.0}.get(base_preset, 88.0)
+    for index, scene in enumerate(scenes):
+        start = max(0.0, float(scene.get("start", index * 6.0) or 0) - 0.30)
+        end = float(scene.get("end", start + 6.0) or start + 6.0)
+        seg_dur = max(1.2, end - start + 0.60)
+        preset = scene_music_preset(index, scene, base_preset)
+        seg = build_music(seg_dur, preset, seed=seed + index * 17,
+                          fade=False, bpm=base_bpm)
+        need = int(seg_dur * config.SR)
+        if len(seg) < need:
+            seg = np.pad(seg, ((0, need - len(seg)), (0, 0)))
+        seg = seg[:need].copy()
+        edge = min(int(0.45 * config.SR), len(seg) // 3)
+        if edge > 0:
+            seg[:edge] *= np.linspace(0, 1, edge)[:, None]
+            seg[-edge:] *= np.linspace(1, 0, edge)[:, None]
+        add(out, start, seg, 0.82, pan=0.0)
+    # gentle glue so overlaps never clip
+    out = np.tanh(out * 0.92) * 1.22
+    fade_n = min(int(0.8 * config.SR), n // 4)
+    if fade_n:
+        out[:fade_n] *= np.linspace(0, 1, fade_n)[:, None]
+        out[-fade_n:] *= np.linspace(1, 0, fade_n)[:, None]
     return out.astype(np.float32)
 
 
@@ -370,6 +424,10 @@ def mix_project(plan: dict, settings: dict, out_path: Path, music_path: Path | N
     if settings.get("music", True):
         if music_path and music_path.exists():
             music = load_custom_music(music_path, duration + 0.3)
+        elif settings.get("music_scene_mood", True):
+            music = build_scene_music(
+                plan, settings.get("music_preset", "tech"),
+                seed=abs(hash(settings.get("style", ""))) % 10000 + 7)
         else:
             music = build_music(duration + 0.3, settings.get("music_preset", "tech"),
                                 seed=abs(hash(settings.get("style", ""))) % 10000 + 7)

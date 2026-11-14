@@ -208,6 +208,14 @@ SCENE_THEMES = (
     {"key": "portal", "tint": (180, 240, 84)},
 )
 
+# Light presets for non-tech topics: dawn, day, dusk, night.
+SCENE_MOOD_TINTS = (
+    (255, 168, 92),
+    (82, 168, 255),
+    (214, 104, 255),
+    (52, 220, 190),
+)
+
 TOPIC_KEYWORDS = {
     "trading": (
         "сделк", "сделок", "сделка", "сделки", "торгов", "журнал", "трейд",
@@ -1501,8 +1509,26 @@ class PixelRenderer:
                 _rect(c, 10 + i * 14, 318 - i * 4, 10, 4, (60, 60, 70), 230)
                 _rect(c, 8 + i * 14, 314 - i * 4, 4, 10, accent, 160)
                 _rect(c, 18 + i * 14, 314 - i * 4, 4, 10, accent, 160)
-            _rect(c, 196, 56, 52, 3, accent2, 200)
-            _rect(c, 200, 62, 44, 2, accent2, 120)
+            # city window and neon sign
+            _rect(c, 148, 54, 106, 96, (8, 12, 20), 240)
+            _rect(c, 152, 58, 98, 88, gfx.blend(bg, tint, 0.30), 235)
+            for i in range(9):
+                bx = 154 + i * 11
+                bh = 12 + (i * 7) % 26
+                _rect(c, bx, 142 - bh, 8, bh, gfx.blend(bg, tint, 0.16), 230)
+                for k in range(2):
+                    _pixel(c, bx + 2 + (k % 2) * 3, 148 - bh + k * 7,
+                           highlight, 80)
+            _pixel(c, 230, 70, (230, 230, 210), 200)
+            _rect(c, 201, 58, 1, 88, (10, 14, 22), 220)
+            _rect(c, 152, 100, 98, 1, (10, 14, 22), 220)
+            _draw_pixel_text(c, "GYM", 170, 38, accent, 220, 2)
+            # floor mat and kettlebell
+            _rect(c, 64, 306, 90, 8, (30, 26, 30), 220)
+            _rect(c, 68, 306, 82, 2, accent2, 90)
+            _rect(c, 218, 300, 14, 10, (20, 24, 30), 230)
+            _rect(c, 221, 296, 8, 5, (40, 46, 56), 230)
+            _rect(c, 224, 294, 3, 3, (60, 66, 76), 230)
         elif set_id == "kitchen":
             for x in range(0, SW, 14):
                 _rect(c, x, 40, 1, 300, (220, 210, 190), 12)
@@ -2322,6 +2348,7 @@ class PixelRenderer:
 
     def _draw_atmosphere(self, c, t, scene_index, tint, accent, accent2, highlight, kind, visual):
         """Dust, light shafts, bokeh and mood layers that make the flat set feel deep."""
+        good = tuple(gfx.GREEN)
         if visual in ("chart", "terminal", "phone"):
             gfx.orb(c, 136, 152, 118, accent, 8, 3)
         for i in range(3):
@@ -2371,6 +2398,48 @@ class PixelRenderer:
                       gfx.blend(good if "fitness" in str(self.profile) else accent, (0, 0, 0), 0.62), 60)
 
     # ------------------------------------------------------ scene dioramas
+    def _draw_topic_mood(self, c, t, scene_index, kind, tint, accent, accent2,
+                         highlight, good, bad, text, muted, bg, card):
+        """Per-scene lighting for gym / kitchen / office / classroom topics."""
+        # tinted haze from the top and a soft horizon glow
+        for i in range(9):
+            _rect(c, 0, i * 9, SW, 9, tint, 5)
+            _rect(c, 0, 314 - i * 9, SW, 9, tint, 3)
+        gfx.orb(c, SW / 2, 338, 122, tint, 7, 3)
+        # moving light shafts
+        for i in range(3):
+            x = -28 + i * 116 + math.sin(t * 0.3 + i * 1.6) * 12
+            path = skia.Path()
+            path.moveTo(x, 0)
+            path.lineTo(x + 26, 0)
+            path.lineTo(x + 84, 318)
+            path.lineTo(x + 40, 318)
+            path.close()
+            paint = skia.Paint(AntiAlias=False)
+            paint.setColor(gfx.col(highlight, 7 + i * 2))
+            c.drawPath(path, paint)
+        # dust and sparks
+        for i in range(24):
+            px = (i * 61 + int(t * (2 + i % 3))) % SW
+            py = 60 + (i * 47 + int(t * (1 + i % 2))) % 250
+            _pixel(c, px, py, highlight if i % 6 else tint, 30 + (i % 4) * 12)
+        # large, low-contrast scene emblem
+        emblem = {
+            "hook": "star", "problem": "cross", "statement": "question",
+            "checklist": "check", "dashboard": "check", "chart": "coin",
+            "diagram": "question", "compare": "check", "cta": "heart",
+            "insight": "star", "solution": "check", "stat": "coin",
+            "bars": "coin", "quote": "question", "timeline": "check",
+        }.get(kind, "star")
+        _draw_icon(c, emblem, 18, 246, tint, 5, 13)
+        _draw_icon(c, emblem, 226, 238, tint, 4, 10)
+        # light rain on the night preset for tense scenes
+        if scene_index % 4 == 3 and kind in ("problem", "statement", "diagram"):
+            for i in range(18):
+                rx = (i * 43 + int(t * 30)) % SW
+                ry = 70 + (i * 37 + int(t * 70)) % 230
+                _rect(c, rx, ry, 1, 4, (170, 210, 235), 30)
+
     def _bg_gradient(self, c, top, bottom):
         for i in range(24):
             u = i / 23.0
@@ -3063,15 +3132,20 @@ class PixelRenderer:
             self._draw_floor(c, t, scene_index, tint, accent, accent2, highlight)
             self._draw_backdrop(c, t, scene_index)
         else:
+            mood = SCENE_MOOD_TINTS[scene_index % len(SCENE_MOOD_TINTS)]
+            tint = gfx.blend(tint, mood, 0.26)
             self._active_tint = tint
             self._diorama_active = False
             self._draw_set(c, t, scene_index, set_id, tint, accent, accent2,
                            highlight, good, bad, bg, card, muted)
-        # cinematic scanlines
+            self._draw_topic_mood(c, t, scene_index, kind, tint, accent, accent2,
+                                  highlight, good, bad, text, muted, bg, card)
+        self._title_accent = (tint if (use_diorama or set_id != "studio")
+                              else tuple(gfx.ACCENT))
         for sy in range(0, SH, 4):
             _rect(c, 0, sy, SW, 1, (0, 0, 0), 8)
 
-        if visual == "room" and not use_diorama:
+        if visual == "room" and not use_diorama and set_id == "studio":
             # window
             _rect(c, 150, 70, 86, 92, gfx.blend(bg, accent2, 0.2))
             _rect(c, 154, 74, 78, 84, gfx.blend(bg, (0, 0, 0), 0.35))
@@ -3470,9 +3544,7 @@ class PixelRenderer:
         kicker = str(scene.get("kicker") or scene.get("label") or "").strip()
         if not title and not accent:
             return
-        accent_rgb = tuple(getattr(self, "_active_tint", gfx.ACCENT))
-        if not getattr(self, "_diorama_active", False):
-            accent_rgb = tuple(gfx.ACCENT)
+        accent_rgb = tuple(getattr(self, "_title_accent", gfx.ACCENT))
         text_rgb = tuple(gfx.TEXT)
         muted = tuple(gfx.MUTED)
         a_kick = min(1.0, max(0.0, t / 0.28))
@@ -3774,32 +3846,50 @@ class PixelRenderer:
         if self.text_scale != 1.0:
             full.restore()
         # light wipe + flash at the scene start
-        if t < 0.34:
-            k = t / 0.34
-            _rect(full, 0, 0, self.out_w, self.out_h, (255, 255, 255),
-                  int(18 * (1 - k)))
-            band_w = 130 * (self.out_w / config.W)
+        if t < 0.38:
+            k = t / 0.38
+            fade = 1.0 - k
+            flash_col = gfx.blend((255, 255, 255), tint, 0.55)
+            _rect(full, 0, 0, self.out_w, self.out_h, flash_col,
+                  int(30 * fade))
+            band_w = 180 * (self.out_w / config.W)
             bx = -band_w + k * (self.out_w + band_w * 2)
             path = skia.Path()
             path.moveTo(bx, 0)
             path.lineTo(bx + band_w, 0)
-            path.lineTo(bx + band_w - 140, self.out_h)
-            path.lineTo(bx - 140, self.out_h)
+            path.lineTo(bx + band_w - 180, self.out_h)
+            path.lineTo(bx - 180, self.out_h)
             path.close()
             paint = skia.Paint(AntiAlias=True)
-            paint.setColor(gfx.col(gfx.ACCENT, int(28 * (1 - k))))
+            paint.setColor(gfx.col(tint, int(52 * fade)))
             full.drawPath(path, paint)
-        end_k = gfx.clamp((t - (duration - 0.32)) / 0.32)
+            # expanding shockwave and speed streaks
+            ring = skia.Paint(AntiAlias=True)
+            ring.setStyle(skia.Paint.kStroke_Style)
+            ring.setStrokeWidth(2.0)
+            ring.setColor(gfx.col(tint, int(64 * fade)))
+            full.drawCircle(self.out_w / 2, self.out_h * 0.46,
+                            self.out_w * (0.10 + 0.58 * k), ring)
+            for i in range(3):
+                sy = self.out_h * (0.18 + i * 0.22)
+                sx = self.out_w * (1.0 - k) - i * 80
+                _rect(full, sx, sy, 240, 2, tint, int(46 * fade))
+        end_k = gfx.clamp((t - (duration - 0.36)) / 0.36)
         if end_k > 0.01:
-            cols = 12
+            cols = 10
             col_w = self.out_w / cols
             h = self.out_h * end_k
             for i in range(cols):
                 x = i * col_w
                 if i % 2 == 0:
-                    _rect(full, x, 0, col_w + 0.5, h, (5, 7, 9), 235)
+                    _rect(full, x, 0, col_w + 0.5, h, (5, 7, 9), 240)
+                    _rect(full, x, h - 2, col_w + 0.5, 2, tint,
+                          int(150 * end_k))
                 else:
-                    _rect(full, x, self.out_h - h, col_w + 0.5, h, (5, 7, 9), 235)
+                    _rect(full, x, self.out_h - h, col_w + 0.5, h,
+                          (5, 7, 9), 240)
+                    _rect(full, x, self.out_h - h, col_w + 0.5, 2, tint,
+                          int(150 * end_k))
             if end_k > 0.8:
                 _rect(full, 0, 0, self.out_w, self.out_h, (3, 4, 6),
                       int(220 * (end_k - 0.8) / 0.2))
