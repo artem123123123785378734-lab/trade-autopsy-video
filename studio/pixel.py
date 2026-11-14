@@ -195,6 +195,19 @@ ANIMATIONS = (
     "thumbs_up",
 )
 
+# Eight distinct stage sets for tech / AI videos. Each scene gets its own
+# palette, architecture and animated atmosphere instead of one repeated room.
+SCENE_THEMES = (
+    {"key": "skyline", "tint": (104, 132, 255)},
+    {"key": "library", "tint": (224, 146, 92)},
+    {"key": "gallery", "tint": (206, 104, 255)},
+    {"key": "sound", "tint": (48, 220, 206)},
+    {"key": "radar", "tint": (66, 160, 255)},
+    {"key": "neural", "tint": (158, 112, 255)},
+    {"key": "chat", "tint": (64, 186, 238)},
+    {"key": "portal", "tint": (180, 240, 84)},
+)
+
 TOPIC_KEYWORDS = {
     "trading": (
         "сделк", "сделок", "сделка", "сделки", "торгов", "журнал", "трейд",
@@ -2357,6 +2370,451 @@ class PixelRenderer:
                 _rect(c, lx, ly, 3 + (i % 2), 9 - i, 
                       gfx.blend(good if "fitness" in str(self.profile) else accent, (0, 0, 0), 0.62), 60)
 
+    # ------------------------------------------------------ scene dioramas
+    def _bg_gradient(self, c, top, bottom):
+        for i in range(24):
+            u = i / 23.0
+            _rect(c, 0, i * 20, SW, 21, gfx.blend(top, bottom, u))
+
+    def _gallery_frame(self, c, x, y, w, h, art, glow):
+        _rect(c, x - 3, y - 3, w + 6, h + 6, (10, 7, 12), 245)
+        _rect(c, x - 2, y - 2, w + 4, 2, (214, 190, 120), 220)
+        _rect(c, x - 2, y + h, w + 4, 2, (150, 128, 80), 200)
+        _rect(c, x, y, w, h, gfx.blend((16, 12, 24), art, 0.28), 240)
+        gfx.orb(c, x + w / 2, y + h / 2, w * 0.45, glow, 10, 3)
+        for i in range(3):
+            ax = x + 6 + (i * 13) % max(7, w - 14)
+            ay = y + 7 + (i * 17) % max(7, h - 14)
+            _rect(c, ax, ay, 5 + (i * 3) % 8, 5 + (i * 5) % 9,
+                  (art, glow, (240, 220, 140))[i % 3], 200)
+        _pixel_ring(c, x + w * 0.62, y + h * 0.42, min(w, h) * 0.22, glow, 180, 4)
+        _rect(c, x + 5, y + h - 4, w - 10, 1, (240, 230, 200), 60)
+
+    def _bg_skyline(self, c, t, scene_index, tint, accent, accent2, highlight,
+                    good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (5, 7, 20), (20, 18, 48))
+        # aurora ribbons
+        for band in range(3):
+            for x in range(0, SW, 4):
+                yy = 82 + band * 30 + math.sin(x * 0.035 + t * 0.8 + band * 1.7) * 12
+                col = gfx.blend((70, 110, 255), (90, 255, 210),
+                                0.5 + 0.5 * math.sin(x * 0.012 + band))
+                _rect(c, x, yy, 4, 16 + band * 4, col, 8 + band * 3)
+        for i in range(46):
+            sx = (i * 61 + 11) % SW
+            sy = (i * 37 + 9) % 150
+            tw = 0.4 + 0.6 * (0.5 + 0.5 * math.sin(t * 2.2 + i * 1.3))
+            _pixel(c, sx, sy, highlight if i % 5 else text, int(90 * tw))
+        # moon and its halo
+        mx, my = 232, 96
+        gfx.orb(c, mx, my, 34, (140, 170, 255), 18, 4)
+        for dy in range(-11, 12):
+            half = int(math.sqrt(max(0, 121 - dy * dy)))
+            _rect(c, mx - half, my + dy, half * 2, 1, (222, 228, 210), 175)
+        for cx0, cy0, rr in ((-3, -2, 2), (2, 3, 2), (0, 5, 1)):
+            _rect(c, mx + cx0, my + cy0, rr, rr, (186, 196, 180), 140)
+        # far skyline
+        for i in range(14):
+            w = 16 + (i * 9) % 14
+            h = 24 + (i * 17) % 52
+            x = (i * 23 - 8) % (SW + 20) - 10
+            y = 224 - h
+            _rect(c, x, y, w, h, gfx.blend((10, 14, 32), tint, 0.14), 210)
+            for wy in range(y + 6, 220, 9):
+                for wx in range(x + 3, x + w - 2, 8):
+                    if (wx + wy + i) % 5 < 2:
+                        _rect(c, wx, wy, 2, 2, highlight, 30)
+        # near skyline with neon signs
+        for i in range(10):
+            w = 20 + (i * 13) % 18
+            h = 38 + (i * 19) % 62
+            x = (i * 31 + 5) % (SW + 30) - 15
+            y = 250 - h
+            _rect(c, x, y, w, h, gfx.blend((8, 11, 26), tint, 0.10), 235)
+            _rect(c, x, y, w, 2, gfx.blend(accent2, (0, 0, 0), 0.3), 100)
+            for wy in range(y + 7, 246, 10):
+                for wx in range(x + 4, x + w - 3, 9):
+                    if (wx * 3 + wy + i) % 7 < 3:
+                        _rect(c, wx, wy, 3, 3, highlight if i % 3 else accent2, 55)
+            if i in (2, 6):
+                _rect(c, x + 2, y + 8, 2, min(h - 16, 34), accent, 150)
+                _rect(c, x + 2, y + 8, 2, 4, (255, 255, 255), 180)
+        # flying traffic
+        for i in range(3):
+            fx = (i * 97 + int(t * (8 + i * 5))) % (SW + 40) - 20
+            fy = 116 + i * 24 + int(math.sin(t * 1.4 + i) * 4)
+            _rect(c, fx, fy, 7, 2, (10, 12, 18), 220)
+            _pixel(c, fx - 1, fy, (255, 90, 90), 190)
+            _pixel(c, fx + 7, fy, (90, 220, 255), 190)
+            _rect(c, fx - 10, fy + 1, 10, 1, accent2, 50)
+        # rooftop deck
+        _rect(c, 0, 330, SW, 4, gfx.blend(tint, (0, 0, 0), 0.25), 220)
+        _rect(c, 0, 332, SW, 1, accent, 160)
+        for i in range(0, SW, 18):
+            _rect(c, i, 338, 9, 2, accent2, 20)
+        for i in range(6):
+            gfx.orb(c, 30 + i * 44, 340, 20, accent2, 6, 2)
+
+    def _bg_library(self, c, t, scene_index, tint, accent, accent2, highlight,
+                    good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (18, 11, 8), (52, 30, 18))
+        # three arched windows with night glass
+        for i, ax in enumerate((58, 116, 174)):
+            _rect(c, ax + 2, 98, 38, 116, (8, 13, 24), 225)
+            for k in range(7):
+                _rect(c, ax + 2 + k * 3, 98 - (7 - k), 38 - k * 6, 2,
+                      (8, 13, 24), 225)
+            _rect(c, ax + 5, 104, 32, 107, gfx.blend((8, 14, 30), tint, 0.18), 235)
+            for j in range(6):
+                _pixel(c, ax + 8 + (j * 9) % 27, 110 + (j * 17) % 78,
+                       highlight, 70 + int(50 * (0.5 + 0.5 * math.sin(t + j))))
+            _rect(c, ax + 21, 104, 1, 107, (10, 16, 26), 190)
+            _rect(c, ax + 5, 154, 32, 1, (10, 16, 26), 190)
+            gfx.orb(c, ax + 21, 148, 14, (255, 190, 100), 8, 2)
+        # warm hanging lamps
+        for lx in (54, 216):
+            _rect(c, lx, 42, 2, 18, (40, 30, 22), 220)
+            _rect(c, lx - 7, 58, 16, 4, (230, 186, 110), 230)
+            gfx.orb(c, lx, 64, 26, (255, 196, 110), 16, 3)
+        # bookshelves on both sides
+        book_cols = ((170, 66, 58), (70, 118, 160), (198, 156, 64),
+                     (92, 150, 96), (150, 94, 160), (196, 110, 72))
+        for side in (0, 1):
+            sx = 0 if side == 0 else 224
+            _rect(c, sx, 74, 46, 262, (38, 24, 16), 245)
+            _rect(c, sx + (0 if side == 0 else 43), 74, 3, 262,
+                  (82, 54, 32), 245)
+            for row in range(9):
+                y = 80 + row * 28
+                _rect(c, sx, y + 24, 46, 3, (24, 14, 10), 245)
+                for b in range(10):
+                    bw = 3
+                    bh = 11 + (b * 7 + row * 5) % 13
+                    bx = sx + 3 + b * 4
+                    _rect(c, bx, y + 24 - bh, bw, bh,
+                          book_cols[(b + row) % len(book_cols)], 225)
+                    if b % 4 == 0:
+                        _rect(c, bx, y + 24 - bh, 1, bh, (255, 244, 220), 40)
+        # floating pages
+        for i in range(7):
+            px = 24 + (i * 41 + int(t * 5)) % 214
+            py = 138 + (i * 53 + int(t * 3)) % 128
+            c.save()
+            c.translate(px, py)
+            c.rotate(math.sin(t * 0.9 + i) * 0.18)
+            _rect(c, -4, -5, 9, 11, (236, 230, 208), 190)
+            _rect(c, -2, -3, 5, 1, (120, 108, 88), 150)
+            _rect(c, -2, 0, 6, 1, (120, 108, 88), 130)
+            _rect(c, -2, 3, 4, 1, (120, 108, 88), 110)
+            c.restore()
+        # wooden floor and a worn rug
+        for i in range(8):
+            _rect(c, 0, 332 + i * 18, SW, 2, (74, 46, 26), 120)
+        for i in range(10):
+            _rect(c, (i * 31 + 7) % SW, 334, 2, 128, (46, 28, 18), 90)
+        _rect(c, 82, 330, 106, 54, (96, 30, 30), 60)
+        _rect(c, 92, 334, 86, 46, (120, 42, 38), 42)
+        for i in range(5):
+            _rect(c, 96 + i * 17, 334, 1, 46, (230, 190, 130), 45)
+
+    def _bg_gallery(self, c, t, scene_index, tint, accent, accent2, highlight,
+                    good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (18, 9, 24), (44, 18, 52))
+        for x in range(0, SW, 54):
+            _rect(c, x, 58, 1, 274, (255, 255, 255), 10)
+        # spotlights
+        for i, sx in enumerate((44, 135, 226)):
+            path = skia.Path()
+            path.moveTo(sx - 9, 0)
+            path.lineTo(sx + 9, 0)
+            path.lineTo(sx + 42, 330)
+            path.lineTo(sx - 42, 330)
+            path.close()
+            paint = skia.Paint(AntiAlias=False)
+            paint.setColor(gfx.col(highlight, 8 + i * 2))
+            c.drawPath(path, paint)
+        # framed pieces at both sides
+        self._gallery_frame(c, 10, 150, 58, 68, (255, 108, 188), accent2)
+        self._gallery_frame(c, 202, 146, 58, 72, (90, 220, 255), (255, 190, 90))
+        # floating paint and color chips
+        for i in range(12):
+            px = (i * 47 + int(t * (3 + i % 3))) % SW
+            py = 120 + (i * 31 + int(t * (2 + i % 2))) % 150
+            col = (accent2, (255, 108, 188), (90, 220, 255), accent)[i % 4]
+            gfx.orb(c, px, py, 3 + i % 3, col, 60, 2)
+            if i % 3 == 0:
+                _rect(c, px, py, 4, 2, (255, 244, 220), 100)
+        # polished floor with coloured reflections
+        _rect(c, 0, 330, SW, 5, (18, 10, 24), 235)
+        _rect(c, 0, 332, SW, 1, accent2, 150)
+        for i in range(8):
+            _rect(c, 14 + i * 33, 340 + (i % 3) * 8, 18, 2,
+                  (255, 108, 188) if i % 3 == 0 else accent2, 24)
+        for i in range(4):
+            gfx.orb(c, 40 + i * 64, 420, 34, accent2 if i % 2 else tint, 7, 2)
+
+    def _bg_sound(self, c, t, scene_index, tint, accent, accent2, highlight,
+                  good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (4, 15, 18), (10, 36, 38))
+        # acoustic foam diamonds
+        for side in (0, 1):
+            x0 = 2 if side == 0 else SW - 58
+            for gy in range(60, 226, 12):
+                for gx in range(0, 56, 12):
+                    shade = gfx.blend((8, 24, 26), (20, 58, 56),
+                                      0.5 + 0.5 * math.sin(gx * 0.2 + gy * 0.3))
+                    _rect(c, x0 + gx + 2, gy, 8, 4, shade, 175)
+                    _rect(c, x0 + gx + 4, gy + 4, 4, 4, shade, 175)
+        # big waveform behind the character
+        cy0 = 188
+        for x in range(8, SW - 8, 3):
+            amp = 4 + 26 * abs(math.sin(x * 0.045 + t * 3.2)) * (
+                0.35 + 0.65 * abs(math.sin(x * 0.011 + t * 0.7)))
+            _rect(c, x, cy0 - amp, 2, amp * 2, gfx.blend(accent2, highlight, 0.45), 34)
+            _rect(c, x, cy0 - amp, 2, 2, highlight, 95)
+            _rect(c, x, cy0 + amp - 2, 2, 2, accent2, 85)
+        # vinyl record
+        vx, vy, vr = 50, 170, 27
+        gfx.orb(c, vx, vy, vr, (5, 8, 10), 235, 1)
+        for r0 in (24, 20, 16, 12):
+            _pixel_ring(c, vx, vy, r0, accent2, 55, 4)
+        gfx.orb(c, vx, vy, 8, accent, 190, 2)
+        _pixel(c, vx - 2, vy - 2, highlight, 220)
+        _rect(c, vx + 10, vy - 12, 12, 2, (255, 255, 255), 28)
+        # side equalizers
+        for side in (0, 1):
+            for i in range(7):
+                bh = 8 + int(28 * abs(math.sin(t * 3.1 + i * 0.8 + side)))
+                bx = 4 + i * 4 if side == 0 else SW - 8 - i * 4
+                _rect(c, bx, 330 - bh, 3, bh, accent if i % 2 else accent2, 120)
+                _rect(c, bx, 330 - bh, 3, 2, highlight, 180)
+        # floating notes
+        for i in range(6):
+            nx = 80 + (i * 37 + int(t * 8)) % 170
+            ny = 120 + (i * 43 + int(t * 4)) % 120
+            _rect(c, nx, ny, 4, 3, highlight, 90)
+            _rect(c, nx + 3, ny - 6, 1, 7, highlight, 90)
+        _rect(c, 0, 330, SW, 4, (6, 22, 24), 235)
+        _rect(c, 0, 332, SW, 1, accent2, 170)
+
+    def _bg_radar(self, c, t, scene_index, tint, accent, accent2, highlight,
+                  good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (4, 12, 26), (8, 28, 48))
+        for x in range(0, SW, 18):
+            _rect(c, x, 54, 1, 286, (90, 170, 255), 9)
+        for y in range(72, 340, 18):
+            _rect(c, 0, y, SW, 1, (90, 170, 255), 9)
+        cx, cy, r = 135, 198, 104
+        for rr, aa in ((r, 7), (72, 6), (42, 6)):
+            gfx.orb(c, cx, cy, rr, (60, 160, 255), aa, 3)
+        for rr in (30, 52, 74, 96, 116):
+            _pixel_ring(c, cx, cy, rr, accent2, 50, 4)
+        _pixel_line(c, cx - r, cy, cx + r, cy, 1, accent2, 42)
+        _pixel_line(c, cx, cy - r, cx, cy + r, 1, accent2, 42)
+        # rotating sweep
+        a0 = (t * 1.25) % math.tau
+        path = skia.Path()
+        path.moveTo(cx, cy)
+        for k in range(15):
+            a = a0 - math.radians(42) * k / 14
+            path.lineTo(cx + math.cos(a) * r, cy + math.sin(a) * r)
+        path.close()
+        paint = skia.Paint(AntiAlias=False)
+        paint.setColor(gfx.col(accent2, 18))
+        c.drawPath(path, paint)
+        _pixel_line(c, cx, cy, cx + math.cos(a0) * r, cy + math.sin(a0) * r,
+                    1, highlight, 170)
+        # contacts
+        for i in range(8):
+            a = i * 0.83 + 0.4
+            rr = 24 + (i * 19) % 82
+            bx = cx + math.cos(a) * rr
+            by = cy + math.sin(a) * rr
+            blink = 0.45 + 0.55 * (0.5 + 0.5 * math.sin(t * 3.4 + i * 1.6))
+            _rect(c, bx - 1, by - 1, 3, 3, accent2 if i % 2 else good,
+                  int(200 * blink))
+            if i % 3 == 0:
+                _pixel_line(c, bx, by, bx + 12, by - 7, 1, accent2, 45)
+        # coordinates and status labels
+        _draw_pixel_text(c, "LAT 55.7", 8, 64, muted, 100, 1)
+        _draw_pixel_text(c, "LON 37.6", 8, 72, muted, 80, 1)
+        _draw_pixel_text(c, "SCAN", SW - 44, 64, accent2, 150, 1)
+        _rect(c, SW - 18, 65, 4, 4, good, int(120 + 100 * (0.5 + 0.5 * math.sin(t * 4))))
+        _rect(c, 0, 330, SW, 4, (6, 18, 32), 235)
+        _rect(c, 0, 332, SW, 1, accent2, 165)
+        # perspective floor grid
+        for i in range(-3, 8):
+            _pixel_line(c, cx, 332, i * 42, 480, 1, accent2, 14)
+
+    def _bg_neural(self, c, t, scene_index, tint, accent, accent2, highlight,
+                   good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (11, 7, 22), (30, 14, 44))
+        cx, cy = 135, 190
+        gfx.orb(c, cx, cy, 94, (120, 84, 255), 9, 4)
+        nodes = []
+        for i in range(20):
+            a = i * math.tau / 20 + 0.2
+            rr = 54 + (i % 5) * 13
+            nodes.append((cx + math.cos(a) * rr * 1.05,
+                          cy + math.sin(a) * rr * 0.80))
+        for i, (x1, y1) in enumerate(nodes):
+            for j in (i + 3, i + 7):
+                x2, y2 = nodes[j % len(nodes)]
+                if abs(x1 - x2) + abs(y1 - y2) < 100:
+                    _pixel_line(c, x1, y1, x2, y2, 1, (130, 104, 255), 26)
+        for i, (x1, y1) in enumerate(nodes):
+            pulse = 0.5 + 0.5 * math.sin(t * 3.1 + i * 0.9)
+            gfx.orb(c, x1, y1, 4 + int(2 * pulse), accent if i % 3 else accent2,
+                    55, 2)
+            _rect(c, x1 - 1, y1 - 1, 2, 2, highlight, 190)
+            if i % 4 == 0:
+                x2, y2 = nodes[(i + 3) % len(nodes)]
+                u = (t * 0.45 + i * 0.11) % 1.0
+                _rect(c, x1 + (x2 - x1) * u, y1 + (y2 - y1) * u, 2, 2,
+                      highlight, 210)
+        # brain-like lobes
+        gfx.orb(c, cx - 16, cy - 6, 28, accent2, 22, 3)
+        gfx.orb(c, cx + 16, cy - 6, 28, accent, 22, 3)
+        _pixel_line(c, cx - 22, cy - 4, cx - 2, cy + 8, 1, highlight, 90)
+        _pixel_line(c, cx + 22, cy - 4, cx + 2, cy + 8, 1, highlight, 90)
+        # drifting particles
+        for i in range(26):
+            px = (i * 67 + int(t * (4 + i % 4))) % SW
+            py = 56 + (i * 41 + int(t * (2 + i % 3))) % 270
+            _rect(c, px, py, 1 if i % 3 else 2, 1 if i % 3 else 2,
+                  highlight if i % 5 else accent, 50 + (i % 4) * 18)
+        # circuit floor
+        _rect(c, 0, 330, SW, 4, (10, 7, 20), 235)
+        _rect(c, 0, 332, SW, 1, accent2, 160)
+        for i in range(9):
+            y = 344 + i * 14
+            _pixel_line(c, 0, y, SW, y, 1, accent2, 10)
+        for i in range(6):
+            lx = 18 + i * 47
+            _pixel_line(c, lx, 334, lx, 390 + (i % 2) * 28, 1, accent2, 22)
+            _rect(c, lx - 1, 334, 3, 3, accent, 110)
+
+    def _bg_chat(self, c, t, scene_index, tint, accent, accent2, highlight,
+                 good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (7, 15, 28), (14, 32, 50))
+        for i in range(4):
+            gfx.orb(c, 20 + i * 76, 110 + (i % 2) * 60, 42, tint, 8, 3)
+        bubbles = (
+            (10, 146, 56, 30, True, tint),
+            (204, 128, 56, 30, False, accent2),
+            (16, 232, 46, 24, True, accent),
+            (210, 238, 48, 26, False, tint),
+            (8, 292, 36, 20, True, accent2),
+        )
+        for idx, (bx, base, bw, bh, right, col) in enumerate(bubbles):
+            by = base + math.sin(t * 0.9 + idx * 1.3) * 4
+            gfx.rrect(c, bx, by, bw, bh, 5, fill=gfx.blend(card, col, 0.35),
+                      alpha=150, stroke=col, sw=1)
+            _rect(c, bx + 5, by + 6, bw - 14, 2, highlight, 100)
+            _rect(c, bx + 5, by + 11, bw - 22, 2, muted, 90)
+            _rect(c, bx + 5, by + 16, bw - 18, 2, muted, 60)
+            if right:
+                _rect(c, bx + 4, by + bh, 4, 2, col, 120)
+                _rect(c, bx + 2, by + bh + 2, 2, 2, col, 90)
+            else:
+                _rect(c, bx + bw - 8, by + bh, 4, 2, col, 120)
+                _rect(c, bx + bw - 4, by + bh + 2, 2, 2, col, 90)
+        # paper planes with dotted trails
+        for i in range(4):
+            px = (i * 79 + int(t * (14 + i * 4))) % (SW + 70) - 35
+            py = 102 + i * 44 + math.sin(t * 1.5 + i * 1.2) * 6
+            path = skia.Path()
+            path.moveTo(px, py)
+            path.lineTo(px + 15, py + 3)
+            path.lineTo(px + 4, py + 11)
+            path.close()
+            paint = skia.Paint(AntiAlias=False)
+            paint.setColor(gfx.col(highlight if i % 2 else accent2, 190))
+            c.drawPath(path, paint)
+            _rect(c, px + 4, py + 3, 7, 1, (255, 255, 255), 110)
+            for k in range(4):
+                _pixel(c, px - 5 - k * 4, py + 4 + k, accent2, 90 - k * 18)
+        # communication towers on the horizon
+        for i in range(5):
+            tx = 18 + i * 58
+            th = 26 + (i * 13) % 30
+            _rect(c, tx, 330 - th, 3, th, (8, 14, 24), 220)
+            _pixel(c, tx + 1, 330 - th - 2, (255, 90, 120),
+                   int(120 + 100 * (0.5 + 0.5 * math.sin(t * 3 + i))))
+            for k in range(3):
+                _pixel_ring(c, tx + 1, 330 - th, 5 + k * 5, accent2, 45, 4,
+                            math.pi, math.tau)
+        _rect(c, 0, 330, SW, 4, (6, 13, 24), 235)
+        _rect(c, 0, 332, SW, 1, accent2, 160)
+
+    def _bg_portal(self, c, t, scene_index, tint, accent, accent2, highlight,
+                   good, bad, text, muted, bg, card):
+        self._bg_gradient(c, (8, 14, 10), (34, 46, 12))
+        lime = (198, 255, 61)
+        gold = (255, 214, 96)
+        gfx.orb(c, 135, 320, 132, lime, 15, 5)
+        gfx.orb(c, 135, 320, 84, gold, 20, 4)
+        # radial light rays
+        for i in range(14):
+            a = math.pi + i * math.pi / 13
+            _pixel_line(c, 135 + math.cos(a) * 44, 320 + math.sin(a) * 44,
+                        135 + math.cos(a) * 250, 320 + math.sin(a) * 250,
+                        1, lime, 14)
+        # concentric portal arches
+        for i, rr in enumerate((44, 64, 86, 108, 132)):
+            _pixel_ring(c, 135, 320, rr, lime if i % 2 else gold,
+                        100 - i * 10, 5)
+        # ascending sparks
+        for i in range(34):
+            px = (i * 47 + int(t * 6)) % SW
+            py = 330 - ((i * 37 + int(t * 22)) % 280)
+            _rect(c, px, py, 2, 2, gold if i % 3 else lime,
+                  70 + (i % 4) * 22)
+        # side arrows
+        for side in (0, 1):
+            ax = 28 if side == 0 else SW - 30
+            for k in range(2):
+                ay = 210 + k * 42 + int(math.sin(t * 2 + k + side) * 3)
+                _rect(c, ax, ay, 2, 18, lime, 110)
+                _rect(c, ax - 4, ay, 10, 2, lime, 110)
+                _rect(c, ax - 2, ay - 3, 6, 2, lime, 110)
+        # runway
+        _rect(c, 0, 330, SW, 5, (20, 30, 10), 235)
+        _rect(c, 0, 332, SW, 1, lime, 210)
+        for i in range(8):
+            _rect(c, 111 - i * 11, 338 + i * 16, 48 + i * 22, 2,
+                  lime, 18 + i * 4)
+        _rect(c, 96, 334, 78, 2, (255, 244, 180), 90)
+
+    def _draw_scene_background(self, c, t, scene_index, theme, tint, accent,
+                               accent2, highlight, good, bad, text, muted,
+                               bg, card):
+        key = theme["key"]
+        if key == "skyline":
+            self._bg_skyline(c, t, scene_index, tint, accent, accent2, highlight,
+                             good, bad, text, muted, bg, card)
+        elif key == "library":
+            self._bg_library(c, t, scene_index, tint, accent, accent2, highlight,
+                             good, bad, text, muted, bg, card)
+        elif key == "gallery":
+            self._bg_gallery(c, t, scene_index, tint, accent, accent2, highlight,
+                             good, bad, text, muted, bg, card)
+        elif key == "sound":
+            self._bg_sound(c, t, scene_index, tint, accent, accent2, highlight,
+                           good, bad, text, muted, bg, card)
+        elif key == "radar":
+            self._bg_radar(c, t, scene_index, tint, accent, accent2, highlight,
+                           good, bad, text, muted, bg, card)
+        elif key == "neural":
+            self._bg_neural(c, t, scene_index, tint, accent, accent2, highlight,
+                            good, bad, text, muted, bg, card)
+        elif key == "chat":
+            self._bg_chat(c, t, scene_index, tint, accent, accent2, highlight,
+                          good, bad, text, muted, bg, card)
+        else:
+            self._bg_portal(c, t, scene_index, tint, accent, accent2, highlight,
+                            good, bad, text, muted, bg, card)
+
     def _draw_story_prop(self, c, scene, t, scene_index, accent, accent2,
                          highlight, good, text, muted, card, bg):
         """Show the thing the scene is talking about: app, site, phone, book, etc."""
@@ -2547,12 +3005,21 @@ class PixelRenderer:
             c.scale(1.035, 1.035)
             c.translate(-SW / 2, -SH / 2)
             c.translate(bg_shift, bg_lift)
-        visual = scene.get("pixel_visual")
+        set_id = str(self.profile.get("set") or "studio")
+        use_diorama = (
+            set_id == "server"
+            and self.settings.get("pixel_scene_backdrops", True) is not False
+        )
+        raw_visual = scene.get("pixel_visual")
+        visual = raw_visual
         if not visual or visual == "auto":
             visual = self.settings.get("pixel_background") or _default_visual(
                 scene.get("kind", "statement"), self.profile)
         if visual not in VISUALS:
             visual = _default_visual(scene.get("kind", "statement"), self.profile)
+        if use_diorama and (not raw_visual or raw_visual == "auto"):
+            # The diorama is the set now; floating chart panels would cover it.
+            visual = "none"
 
         _rect(c, 0, 0, SW, SH, bg)
         kind = str(scene.get("kind") or "")
@@ -2563,8 +3030,25 @@ class PixelRenderer:
             tint = gfx.blend(tint, (255, 188, 78), 0.35)
         scene_start = float(scene.get("start", 0) or 0)
         env = self._env_at(scene_start + t)
-        set_id = str(self.profile.get("set") or "studio")
-        if set_id == "studio":
+        if use_diorama:
+            theme = SCENE_THEMES[scene_index % len(SCENE_THEMES)]
+            if kind == "hook":
+                theme = SCENE_THEMES[0]
+            elif kind == "cta":
+                theme = SCENE_THEMES[-1]
+            tint = tuple(theme.get("tint", tint))
+            if kind == "problem":
+                tint = gfx.blend(tint, (255, 82, 120), 0.35)
+            elif kind == "cta":
+                tint = gfx.blend(tint, (255, 188, 78), 0.22)
+            self._active_tint = tint
+            self._diorama_active = True
+            self._draw_scene_background(
+                c, t, scene_index, theme, tint, accent, accent2, highlight,
+                good, bad, text, muted, bg, card)
+        elif set_id == "studio":
+            self._active_tint = tint
+            self._diorama_active = False
             self._draw_sky(c, t, scene_index, tint, accent, accent2, highlight, text, bg)
             self._draw_beams(c, t, accent2, highlight)
             self._draw_city(c, t, scene_index, tint, accent, accent2, highlight, bg)
@@ -2579,13 +3063,15 @@ class PixelRenderer:
             self._draw_floor(c, t, scene_index, tint, accent, accent2, highlight)
             self._draw_backdrop(c, t, scene_index)
         else:
+            self._active_tint = tint
+            self._diorama_active = False
             self._draw_set(c, t, scene_index, set_id, tint, accent, accent2,
                            highlight, good, bad, bg, card, muted)
         # cinematic scanlines
         for sy in range(0, SH, 4):
             _rect(c, 0, sy, SW, 1, (0, 0, 0), 8)
 
-        if visual == "room":
+        if visual == "room" and not use_diorama:
             # window
             _rect(c, 150, 70, 86, 92, gfx.blend(bg, accent2, 0.2))
             _rect(c, 154, 74, 78, 84, gfx.blend(bg, (0, 0, 0), 0.35))
@@ -2677,7 +3163,7 @@ class PixelRenderer:
         else:
             _rect(c, 0, 340, SW, 140, gfx.blend(bg, accent, 0.08))
 
-        if set_id == "studio":
+        if set_id == "studio" or (set_id == "server" and not use_diorama):
             self._draw_topic_props(c, t, kind)
         # extra reusable props: object count controls density
         try:
@@ -2695,8 +3181,9 @@ class PixelRenderer:
         # storyteller; charts and windows are supporting context.
         _rect(c, 0, 44, SW, 196, (0, 0, 0), 26)
         self._draw_atmosphere(c, t, scene_index, tint, accent, accent2, highlight, kind, visual)
-        self._draw_story_prop(c, scene, t, scene_index, accent, accent2, highlight,
-                             good, text, muted, card, bg)
+        self._draw_story_prop(c, scene, t, scene_index,
+                              tint if use_diorama else accent, accent2, highlight,
+                              good, text, muted, card, bg)
         # foreground silhouettes frame the stage and add depth
         for i in range(10):
             _rect(c, i * 3, 350 + i * 4, 26 - i * 2, 4, (2, 4, 6), 120)
@@ -2983,7 +3470,9 @@ class PixelRenderer:
         kicker = str(scene.get("kicker") or scene.get("label") or "").strip()
         if not title and not accent:
             return
-        accent_rgb = tuple(gfx.ACCENT)
+        accent_rgb = tuple(getattr(self, "_active_tint", gfx.ACCENT))
+        if not getattr(self, "_diorama_active", False):
+            accent_rgb = tuple(gfx.ACCENT)
         text_rgb = tuple(gfx.TEXT)
         muted = tuple(gfx.MUTED)
         a_kick = min(1.0, max(0.0, t / 0.28))
@@ -3212,11 +3701,13 @@ class PixelRenderer:
             except Exception:
                 pass
         # scene color script
-        tint = tuple(self.profile.get("tint", (120, 140, 200)))
-        if kind == "problem":
-            tint = gfx.blend(tint, (255, 82, 120), 0.55)
-        elif kind == "cta":
-            tint = gfx.blend(tint, (255, 188, 78), 0.35)
+        tint = tuple(getattr(self, "_active_tint",
+                             self.profile.get("tint", (120, 140, 200))))
+        if not getattr(self, "_diorama_active", False):
+            if kind == "problem":
+                tint = gfx.blend(tint, (255, 82, 120), 0.55)
+            elif kind == "cta":
+                tint = gfx.blend(tint, (255, 188, 78), 0.35)
         grade = skia.Paint()
         grade.setShader(skia.GradientShader.MakeLinear(
             [skia.Point(0, 0), skia.Point(0, self.out_h)],
@@ -3434,6 +3925,17 @@ def _pixel_line(c, x0, y0, x1, y1, width, color, alpha=255):
         x = x0 + (x1 - x0) * u
         y = y0 + (y1 - y0) * u
         _rect(c, round(x - w / 2), round(y - w / 2), w, w, color, alpha)
+
+
+def _pixel_ring(c, cx, cy, r, color, alpha=200, step=5.0,
+                start=0.0, end=math.tau):
+    """Dotted pixel circle. Reads like a radar / hologram at low resolution."""
+    if r <= 0 or alpha <= 0:
+        return
+    n = max(8, int(abs(end - start) * max(1.0, r) / max(1.0, step)))
+    for i in range(n + 1):
+        a = start + (end - start) * i / n
+        _pixel(c, cx + math.cos(a) * r, cy + math.sin(a) * r, color, alpha)
 
 
 def _draw_limbs(c, ox, oy, scale, ch, anim, t, env, part="arms"):
