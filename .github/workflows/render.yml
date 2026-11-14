@@ -74,8 +74,11 @@ jobs:
 
           get("https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz",
               "/tmp/piper.tgz")
+          # Pin the voice revision: the current `main` JSON contains multi-codepoint
+          # diphthongs (aɪ/aʊ/…) that the MIT-licensed Piper 2023.11 binary rejects.
+          # This revision uses a single-codepoint phoneme map and works with it.
           voices = {
-              "dmitri": "main",
+              "dmitri": "e7229f7d33a10e145e109b886d661984201ac3c4",
               "denis": "e7229f7d33a10e145e109b886d661984201ac3c4",
           }
           for voice, rev in voices.items():
